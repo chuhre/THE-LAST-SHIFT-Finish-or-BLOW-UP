@@ -93,13 +93,13 @@ void SceneWIU::Init()
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
 	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
-	meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
+	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	// OBJ Models
 
 
 	// Skybox NIGHT
-	meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
+	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
 	meshList[GEO_LEFT]->textureID = LoadTGA("Images//nightsky_lf.tga");
 
 	meshList[GEO_RIGHT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
@@ -115,7 +115,7 @@ void SceneWIU::Init()
 	meshList[GEO_FRONT]->textureID = LoadTGA("Images//nightsky_bk.tga");
 
 	meshList[GEO_BACK] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");
+	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");*/
 
 
 
@@ -261,7 +261,7 @@ void SceneWIU::Render()
 	
 
 	// Skybox NIGHT
-	RenderSkybox();
+	//RenderSkybox();
 
 
 
