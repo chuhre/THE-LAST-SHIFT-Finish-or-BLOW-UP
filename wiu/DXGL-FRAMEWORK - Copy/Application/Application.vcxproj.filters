@@ -51,7 +51,7 @@
     <ClCompile Include="Source\SceneModel2.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\..\..\GDT\Y1SEM2\CGP\DXGL-FRAMEWORK\Application\Source\SceneManager.cpp">
+    <ClCompile Include="Source\SceneManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +101,7 @@
     <ClInclude Include="Source\SceneModel2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\..\..\GDT\Y1SEM2\CGP\DXGL-FRAMEWORK\Application\Source\SceneManager.h">
+    <ClInclude Include="Source\SceneManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

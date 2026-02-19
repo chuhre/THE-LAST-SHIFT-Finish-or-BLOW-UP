@@ -146,7 +146,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\GDT\Y1SEM2\CGP\DXGL-FRAMEWORK\Application\Source\SceneManager.cpp" />
     <ClCompile Include="Source\AltAzCamera.cpp" />
     <ClCompile Include="Source\Application.cpp" />
     <ClCompile Include="Source\FPCamera.cpp" />
@@ -156,12 +155,12 @@
     <ClCompile Include="Source\MatrixStack.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\MeshBuilder.cpp" />
+    <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\SceneModel.cpp" />
     <ClCompile Include="Source\SceneModel2.cpp" />
     <ClCompile Include="Source\shader.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\GDT\Y1SEM2\CGP\DXGL-FRAMEWORK\Application\Source\SceneManager.h" />
     <ClInclude Include="Source\AltAzCamera.h" />
     <ClInclude Include="Source\Application.h" />
     <ClInclude Include="Source\FPCamera.h" />
@@ -173,6 +172,7 @@
     <ClInclude Include="Source\Mesh.h" />
     <ClInclude Include="Source\MeshBuilder.h" />
     <ClInclude Include="Source\Scene.h" />
+    <ClInclude Include="Source\SceneManager.h" />
     <ClInclude Include="Source\SceneModel.h" />
     <ClInclude Include="Source\SceneModel2.h" />
     <ClInclude Include="Source\shader.hpp" />
