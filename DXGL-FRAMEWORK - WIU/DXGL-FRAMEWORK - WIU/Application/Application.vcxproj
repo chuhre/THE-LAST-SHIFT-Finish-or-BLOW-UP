@@ -157,6 +157,7 @@
     <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\MeshBuilder.cpp" />
     <ClCompile Include="Source\PhysicsObject.cpp" />
+    <ClCompile Include="Source\SceneCans.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
     <ClCompile Include="Source\SceneWIU.cpp" />
     <ClCompile Include="Source\shader.cpp" />
@@ -176,6 +177,7 @@
     <ClInclude Include="Source\ObjectPool.h" />
     <ClInclude Include="Source\PhysicsObject.h" />
     <ClInclude Include="Source\Scene.h" />
+    <ClInclude Include="Source\SceneCans.h" />
     <ClInclude Include="Source\SceneManager.h" />
     <ClInclude Include="Source\SceneWIU.h" />
     <ClInclude Include="Source\shader.hpp" />
