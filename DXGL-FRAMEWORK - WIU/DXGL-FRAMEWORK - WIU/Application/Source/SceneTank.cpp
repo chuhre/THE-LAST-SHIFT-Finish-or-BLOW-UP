@@ -1,4 +1,4 @@
-#include "SceneCans.h"
+#include "SceneTank.h"
 #include "GL\glew.h"
 
 // GLM Headers
@@ -19,15 +19,15 @@
 #include "MouseController.h"
 #include "LoadTGA.h"
 
-SceneCans::SceneCans()
+SceneTank::SceneTank()
 {
 }
 
-SceneCans::~SceneCans()
+SceneTank::~SceneTank()
 {
 }
 
-void SceneCans::Init()
+void SceneTank::Init()
 {
 	// Set background color to dark blue
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
@@ -166,7 +166,7 @@ void SceneCans::Init()
 
 
 
-void SceneCans::Update(double dt)
+void SceneTank::Update(double dt)
 {
 	HandleKeyPress();
 	HandleMouseInput();
@@ -209,7 +209,7 @@ void SceneCans::Update(double dt)
 
 }
 
-void SceneCans::Render()
+void SceneTank::Render()
 {
 	// Clear color buffer every frame
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -267,7 +267,7 @@ void SceneCans::Render()
 
 }
 
-void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
+void SceneTank::RenderMesh(Mesh* mesh, bool enableLight)
 {
 	glm::mat4 MVP, modelView, modelView_inverse_transpose;
 
@@ -317,7 +317,7 @@ void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
 }
 
 
-void SceneCans::RenderSkybox() {
+void SceneTank::RenderSkybox() {
 	modelStack.PushMatrix();
 
 	// Offset in Z direction by -50 units
@@ -371,7 +371,7 @@ void SceneCans::RenderSkybox() {
 
 
 
-void SceneCans::RenderMeshOnScreen(Mesh* mesh, float x, float
+void SceneTank::RenderMeshOnScreen(Mesh* mesh, float x, float
 	y, float sizex, float sizey)
 {
 	glDisable(GL_DEPTH_TEST);
@@ -404,7 +404,7 @@ void SceneCans::RenderMeshOnScreen(Mesh* mesh, float x, float
 
 
 
-void SceneCans::Exit()
+void SceneTank::Exit()
 {
 	// Cleanup VBO here
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
@@ -418,7 +418,7 @@ void SceneCans::Exit()
 	glDeleteProgram(m_programID);
 }
 
-void SceneCans::HandleKeyPress()
+void SceneTank::HandleKeyPress()
 {
 	if (KeyboardController::GetInstance()->IsKeyPressed(0x31))
 	{
@@ -476,7 +476,7 @@ void SceneCans::HandleKeyPress()
 
 }
 
-void SceneCans::HandleMouseInput() {
+void SceneTank::HandleMouseInput() {
 	static bool isLeftUp = false;
 	static bool isRightUp = false;
 
@@ -508,7 +508,7 @@ void SceneCans::HandleMouseInput() {
 
 
 
-void SceneCans::RenderText(Mesh* mesh, std::string text, glm::vec3
+void SceneTank::RenderText(Mesh* mesh, std::string text, glm::vec3
 	color)
 {
 	if (!mesh || mesh->textureID <= 0) //Proper error check
@@ -547,7 +547,7 @@ void SceneCans::RenderText(Mesh* mesh, std::string text, glm::vec3
 
 
 
-void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
+void SceneTank::RenderTextOnScreen(Mesh* mesh, std::string
 	text, glm::vec3 color, float size, float x, float y)
 {
 	if (!mesh || mesh->textureID <= 0) //Proper error check

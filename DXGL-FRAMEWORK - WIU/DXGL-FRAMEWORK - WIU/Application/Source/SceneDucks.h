@@ -1,5 +1,5 @@
-#ifndef SCENE_CANS_H
-#define SCENE_CANS_H
+#ifndef SCENE_DUCKS_H
+#define SCENE_DUCKS_H
 
 #include "Scene.h"
 #include "Mesh.h"
@@ -8,7 +8,7 @@
 #include "MatrixStack.h"
 #include "Light.h"
 
-class SceneCans : public Scene
+class SceneDucks : public Scene
 {
 public:
 	enum GEOMETRY_TYPE
@@ -105,8 +105,8 @@ public:
 	};
 
 
-	SceneCans();
-	~SceneCans();
+	SceneDucks();
+	~SceneDucks();
 
 	virtual void Init();
 	virtual void Update(double dt);

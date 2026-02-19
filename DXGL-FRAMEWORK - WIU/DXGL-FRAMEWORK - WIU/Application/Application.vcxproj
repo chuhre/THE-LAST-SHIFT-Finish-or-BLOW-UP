@@ -158,7 +158,11 @@
     <ClCompile Include="Source\MeshBuilder.cpp" />
     <ClCompile Include="Source\PhysicsObject.cpp" />
     <ClCompile Include="Source\SceneCans.cpp" />
+    <ClCompile Include="Source\SceneDucks.cpp" />
+    <ClCompile Include="Source\SceneLobby.cpp" />
     <ClCompile Include="Source\SceneManager.cpp" />
+    <ClCompile Include="Source\SceneShooting.cpp" />
+    <ClCompile Include="Source\SceneTank.cpp" />
     <ClCompile Include="Source\SceneWIU.cpp" />
     <ClCompile Include="Source\shader.cpp" />
   </ItemGroup>
@@ -178,7 +182,11 @@
     <ClInclude Include="Source\PhysicsObject.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\SceneCans.h" />
+    <ClInclude Include="Source\SceneDucks.h" />
+    <ClInclude Include="Source\SceneLobby.h" />
     <ClInclude Include="Source\SceneManager.h" />
+    <ClInclude Include="Source\SceneShooting.h" />
+    <ClInclude Include="Source\SceneTank.h" />
     <ClInclude Include="Source\SceneWIU.h" />
     <ClInclude Include="Source\shader.hpp" />
     <ClInclude Include="Source\Vertex.h" />
