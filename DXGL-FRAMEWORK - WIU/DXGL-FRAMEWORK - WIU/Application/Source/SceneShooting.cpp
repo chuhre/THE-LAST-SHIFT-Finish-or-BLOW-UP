@@ -97,6 +97,27 @@ void SceneShooting::Init()
 
 	// OBJ Models
 
+	// props
+	/*meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(1.f, 1.f, 1.f), 10.f, 1.f, 2.f);
+	meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateRectangularPrism("Target Rail", glm::vec3(1.f, 1.f, 1.f), 10.f, 0.5f, 0.5f);
+	meshList[GEO_TARGET] = MeshBuilder::GenerateSphere("Target", glm::vec3(1.f, 0.f, 0.f), 0.5f, 16, 16);
+	meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.f, 0.f, 0.f), 0.5f, 16, 16);*/
+	meshList[GEO_GUN] = MeshBuilder::GenerateOBJ("Gun", "Models//Toy_Gun.obj");
+	//meshList[GEO_GUN]->textureID = LoadTGA("Images//doorman.tga");
+
+
+
+
+
+
+	// Environment
+	//meshList[GEO_FLOOR] = MeshBuilder::GenerateQuad("Floor", glm::vec3(1.f, 1.f, 1.f), 100.f);
+	//meshList[GEO_FLOOR]->textureID = LoadTGA("Images//floor.tga");
+
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.9f, 0.9f), 1.f, 1.f, 1.f);
+	//meshList[GEO_WALL]->textureID = LoadTGA("Images//wall.tga");
+
+
 
 	// Skybox NIGHT
 	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
@@ -125,7 +146,7 @@ void SceneShooting::Init()
 	projectionStack.LoadMatrix(projection);
 
 	// Player collision box size (width, height, depth)
-	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
+	//playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
 
 	// ANIMATIONS
@@ -259,6 +280,49 @@ void SceneShooting::Render()
 
 	// render tests
 
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 5.f, 0.f);
+	modelStack.Scale(10.f, 10.f, 1.f);
+
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_WALL]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+
+
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Scale(10.f, 0.5f, 10.f);
+
+	meshList[GEO_CUBE]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_CUBE]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_CUBE]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_CUBE]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_CUBE], true);
+	modelStack.PopMatrix();
+
+
+	/*modelStack.PushMatrix();
+	modelStack.Scale(0.1f, 0.1f, 0.1f);
+
+	meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_GUN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_GUN]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_GUN], true);
+	modelStack.PopMatrix(); */
+
+
+
+
+
+
 
 	// Skybox NIGHT
 	//RenderSkybox();
@@ -317,57 +381,57 @@ void SceneShooting::RenderMesh(Mesh* mesh, bool enableLight)
 }
 
 
-void SceneShooting::RenderSkybox() {
-	modelStack.PushMatrix();
-
-	// Offset in Z direction by -50 units
-	modelStack.Translate(0.f, 0.f, -50.f);
-
-	// Skybox should be rendered without light
-	RenderMesh(meshList[GEO_FRONT], false);
-	modelStack.PopMatrix();
-
-	// Do the rest of the quads with
-	// appropriate positions and rotations
-	// so that the camera is inside the skybox
-
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.f, -50.f);
-	RenderMesh(meshList[GEO_FRONT], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.f, 50.f);
-	modelStack.Rotate(-180.f, 0.f, 1.f, 0.f);
-	RenderMesh(meshList[GEO_BACK], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(-50.f, 0.f, 0.f);
-	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
-	RenderMesh(meshList[GEO_LEFT], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(50.f, 0.f, 0.f);
-	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
-	RenderMesh(meshList[GEO_RIGHT], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 50.f, 0.f);
-	modelStack.Rotate(90.f, 1.f, 0.f, 0.f);
-	modelStack.Rotate(90.f, 0.f, 0.f, 1.f);
-	RenderMesh(meshList[GEO_TOP], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, -50.f, 0.f);
-	modelStack.Rotate(-90.f, 1.f, 0.f, 0.f);
-	RenderMesh(meshList[GEO_BOTTOM], false);
-	modelStack.PopMatrix();
-
-}
+//void SceneShooting::RenderSkybox() {
+//	modelStack.PushMatrix();
+//
+//	// Offset in Z direction by -50 units
+//	modelStack.Translate(0.f, 0.f, -50.f);
+//
+//	// Skybox should be rendered without light
+//	RenderMesh(meshList[GEO_FRONT], false);
+//	modelStack.PopMatrix();
+//
+//	// Do the rest of the quads with
+//	// appropriate positions and rotations
+//	// so that the camera is inside the skybox
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(0.f, 0.f, -50.f);
+//	RenderMesh(meshList[GEO_FRONT], false);
+//	modelStack.PopMatrix();
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(0.f, 0.f, 50.f);
+//	modelStack.Rotate(-180.f, 0.f, 1.f, 0.f);
+//	RenderMesh(meshList[GEO_BACK], false);
+//	modelStack.PopMatrix();
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(-50.f, 0.f, 0.f);
+//	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+//	RenderMesh(meshList[GEO_LEFT], false);
+//	modelStack.PopMatrix();
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(50.f, 0.f, 0.f);
+//	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+//	RenderMesh(meshList[GEO_RIGHT], false);
+//	modelStack.PopMatrix();
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(0.f, 50.f, 0.f);
+//	modelStack.Rotate(90.f, 1.f, 0.f, 0.f);
+//	modelStack.Rotate(90.f, 0.f, 0.f, 1.f);
+//	RenderMesh(meshList[GEO_TOP], false);
+//	modelStack.PopMatrix();
+//
+//	modelStack.PushMatrix();
+//	modelStack.Translate(0.f, -50.f, 0.f);
+//	modelStack.Rotate(-90.f, 1.f, 0.f, 0.f);
+//	RenderMesh(meshList[GEO_BOTTOM], false);
+//	modelStack.PopMatrix();
+//
+//}
 
 
 

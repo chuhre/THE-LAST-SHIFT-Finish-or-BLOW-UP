@@ -7,6 +7,7 @@
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
+#include <string>
 
 class SceneShooting : public Scene
 {
@@ -18,38 +19,28 @@ public:
 		GEO_CUBE,
 		GEO_PLANE,
 
-		OBJ_CASH_REGISTER,
-
-		OBJ_MAN,
-		OBJ_ENTITY,
-
-		OBJ_TACO,
-
-		GEO_SHUTTER,
-
-		GEO_LEFT,
+		/*GEO_LEFT,
 		GEO_RIGHT,
 		GEO_TOP,
 		GEO_BOTTOM,
 		GEO_FRONT,
-		GEO_BACK,
+		GEO_BACK,*/
 
-		GEO_KIOSK_FLOOR,
-		GEO_KIOSK_WALL,
-		GEO_KIOSK_COUNTER,
-		GEO_KIOSK_ROOF,
+		
+		// Environment
+		GEO_FLOOR,
+		GEO_WALL,
+		GEO_CEILING,
 
-		GEO_DOOR_HOLE,
-		GEO_DOOR,
+		// Props
+		GEO_COUNTER,        // barrier between player and targets
+		GEO_TARGET_RAIL,    // long bar that targets slide on
+		GEO_TARGET,         // the moving duck / tin-can target
+		GEO_BOMB,           // bomb sitting on the counter
+		GEO_GUN,            // the MISSING item the player must find
 
-		GEO_LIGHT_SWITCH,        // Switch plate
-		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
-
-		GEO_SHUTTER_BUTTON,
-		GEO_SHUTTER_BUTTON_PRESS,
-
-		GEO_GUI,
-
+		// HUD
+		GEO_GUI,            // crosshair quad
 		GEO_TEXT,
 
 		NUM_GEOMETRY,
@@ -90,21 +81,31 @@ public:
 
 	enum GameState
 	{
-		GAME_NOT_STARTED = 0,
-		GAME_PLAYING,
-		GAME_WON,
-		GAME_LOST
+		STATE_FIND_GUN = 0,  // player must locate and pick up the gun first
+		STATE_PLAYING,       // bomb timer counting down, player can shoot
+		STATE_WON,           // all 5 targets hit before time ran out
+		STATE_LOST           // timer hit 0 OR ran out of bullets with < 5 hits
 	};
 
-	enum CustomerState
+	
+	// =====================================================
+	// TARGET DATA
+	// =====================================================
+	struct Target
 	{
-		CUSTOMER_NONE = 0,
-		CUSTOMER_WAITING,
-		CUSTOMER_ORDERED,
-		CUSTOMER_IS_MONSTER
+		glm::vec3 position;
+		float speed;        // units per second along X
+		float direction;    // +1.0 or -1.0
+		float minX, maxX;   // patrol bounds on the rail
+		bool  isAlive;
 	};
 
+	static const int NUM_TARGETS = 5;
+	static const int MAX_BULLETS = 8;
 
+	// =====================================================
+	// LIFECYCLE
+	// =====================================================
 	SceneShooting();
 	~SceneShooting();
 
@@ -114,89 +115,56 @@ public:
 	virtual void Exit();
 
 private:
+	// ----- input helpers ----------------------------------
 	void HandleKeyPress();
-	void RenderMesh(Mesh* mesh, bool enableLight);
-
-	unsigned m_vertexArrayID;
-	Mesh* meshList[NUM_GEOMETRY];
-
-	unsigned m_programID;
-	unsigned m_parameters[U_TOTAL];
-
-	//AltAzCamera camera;
-	int projType = 1; // fix to 0 for orthographic, 1 for projection
-	FPCamera camera;
-
-
-	MatrixStack modelStack, viewStack, projectionStack;
-
-	static const int NUM_LIGHTS = 1;
-	Light light[NUM_LIGHTS];
-	bool enableLight;
-
-
-
-
-
-	// ANIMATIONS/INTERACTIONS
-	// door
-	float doorRotation;  // 0 = closed, 90 = open
-	bool isDoorOpen;
-	glm::vec3 doorPosition; // Store door position
-	// Helper function to check if player is near door
-	bool IsPlayerNearDoor(float radius);
-
-
-	// light 
-	glm::vec3 lightSwitchPosition;
-	bool isLightSwitchOn;
-	float leverRotation;
-
-	bool IsPlayerNearLightSwitch(float radius);
-
-
-	// shutter
-	glm::vec3 shutterButtonPosition;
-	bool isShutterOpen;
-	float shutterHeight;
-	float buttonPressDepth;
-
-	bool IsPlayerNearShutterButton(float radius);
-
-
-
-	// Game state
-	GameState gameState;
-	CustomerState customerState;
-
-	int playerLives;
-	int customersServed;  // Total correct serves to win
-
-	glm::vec3 npcPosition;
-	bool isMonster;        // Is current customer a monster?
-	bool hasTaco;         // Is player holding taco?
-	float customerTimer;  // Timer for customer events
-
-	bool showNPC;         // Simple flag to show/hide NPC
-
-
-
-	// Collision detection
-	glm::vec3 playerSize;
-	bool CheckWallCollision(const glm::vec3& pos);
-
-	void RenderSkybox();
-	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
-		float sizex, float sizey);
-
 	void HandleMouseInput();
 
-	void RenderText(Mesh* mesh, std::string text, glm::vec3
-		color);
-	void RenderTextOnScreen(Mesh* mesh, std::string text,
-		glm::vec3 color, float size, float x, float y);
+	// ----- rendering helpers (same signatures as SceneWIU) 
+	void RenderMesh(Mesh* mesh, bool enableLight);
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
+	void RenderText(Mesh* mesh, std::string text, glm::vec3 color);
+	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
 
-	float fps = 0;
+	// ----- game logic helpers -----------------------------
+	void Shoot();
+	bool RayHitTarget(int index);       // hitscan from camera through crosshair
+	void ResetGame();
+	bool IsPlayerNearGun(float radius);
+
+	// ----- GL handles -------------------------------------
+	unsigned m_vertexArrayID;
+	unsigned m_programID;
+	unsigned m_parameters[U_TOTAL];
+	Mesh* meshList[NUM_GEOMETRY];
+
+	// ----- camera & matrices (same as SceneWIU) ----------
+	FPCamera    camera;
+	int         projType = 1; // 0 = ortho, 1 = perspective
+	MatrixStack modelStack, viewStack, projectionStack;
+
+	// ----- lighting (same as SceneWIU) -------------------
+	static const int NUM_LIGHTS = 1;
+	Light light[NUM_LIGHTS];
+	bool  enableLight;
+
+	// ----- game state ------------------------------------
+	GameState gameState;
+	int       bulletsLeft;    // starts at MAX_BULLETS (8)
+	int       targetsHit;     // need to hit all NUM_TARGETS (5) to win
+	float     bombTimer;      // counts DOWN from 120.0 seconds (2 minutes)
+
+	// ----- gun (the missing element) ---------------------
+	glm::vec3 gunWorldPos;    // where the gun is lying on the floor
+	bool      gunPickedUp;
+
+	// ----- targets ----------------------------------------
+	Target targets[NUM_TARGETS];
+
+	// ----- muzzle flash -----------------------------------
+	float muzzleFlashTimer;   // renders a white flash for ~0.05s on each shot
+
+	// ----- misc -------------------------------------------
+	float fps;
 };
 
 #endif

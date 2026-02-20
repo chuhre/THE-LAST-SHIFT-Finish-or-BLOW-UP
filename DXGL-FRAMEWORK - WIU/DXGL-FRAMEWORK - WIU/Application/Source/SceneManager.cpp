@@ -53,7 +53,7 @@ void SceneManager::Init(void)
     scenes[SCENE_TANK] = new SceneTank();
 
     // Initialize the first scene
-    currentSceneType = SCENE_LOBBY;
+    currentSceneType = SCENE_SHOOTING;
     currentScene = scenes[currentSceneType];
     currentScene->Init();
 }
