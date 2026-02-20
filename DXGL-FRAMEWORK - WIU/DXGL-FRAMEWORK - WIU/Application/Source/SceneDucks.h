@@ -17,6 +17,7 @@ public:
 		GEO_SPHERE,
 		GEO_CUBE,
 		GEO_PLANE,
+		GEO_WALL,
 
 		OBJ_CASH_REGISTER,
 

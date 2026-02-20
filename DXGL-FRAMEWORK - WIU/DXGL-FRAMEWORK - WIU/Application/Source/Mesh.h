@@ -2,7 +2,7 @@
 #define MESH_H
 
 #include <string>
-#include "Mesh.h"
+#include <vector>
 #include "Material.h"
 
 /******************************************************************************/
@@ -21,19 +21,23 @@ public:
 		DRAW_LINES,
 		DRAW_MODE_LAST,
 	};
-	Mesh(const std::string &meshName);
+	Mesh(const std::string& meshName);
 	~Mesh();
 	void Render();
+	static void SetMaterialLoc(unsigned kA, unsigned kD, unsigned kS, unsigned nS);
 
+	std::vector<Material> materials;
+	static unsigned locationKa;
+	static unsigned locationKd;
+	static unsigned locationKs;
+	static unsigned locationNs;
 	const std::string name;
 	DRAW_MODE mode;
 	unsigned vertexBuffer;
 	unsigned indexBuffer;
 	unsigned indexSize;
-
-	unsigned textureID;
-
 	Material material;
+	unsigned textureID;
 
 	void Render(unsigned offset, unsigned count);
 };

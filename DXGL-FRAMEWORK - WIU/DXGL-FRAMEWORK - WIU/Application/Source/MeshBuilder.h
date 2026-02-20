@@ -29,6 +29,8 @@ public:
 	static Mesh* GenerateHalfHemisphere(const std::string& meshName, glm::vec3 color, unsigned numStack, unsigned numSlice, float radius);
 	
 	static Mesh* GenerateOBJ(const std::string& meshName, const std::string& file_path);
+	static Mesh* GenerateOBJMTL(const std::string& meshName, const std::string& file_path, const std::string& mtl_path);
+
 
 	static Mesh* GenerateText(const std::string& meshName, unsigned numRow, unsigned numCol);
 	
