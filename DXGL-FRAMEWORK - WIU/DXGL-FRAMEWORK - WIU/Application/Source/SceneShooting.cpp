@@ -294,7 +294,7 @@ void SceneShooting::Render()
 
 
 
-	modelStack.PushMatrix();
+	/*modelStack.PushMatrix();
 	modelStack.Translate(0.f, 0.f, 0.f);
 	modelStack.Scale(10.f, 0.5f, 10.f);
 
@@ -304,10 +304,11 @@ void SceneShooting::Render()
 	meshList[GEO_CUBE]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_CUBE], true);
-	modelStack.PopMatrix();
+	modelStack.PopMatrix();*/
 
 
-	/*modelStack.PushMatrix();
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, -1.f, 0.f);
 	modelStack.Scale(0.1f, 0.1f, 0.1f);
 
 	meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
@@ -316,7 +317,7 @@ void SceneShooting::Render()
 	meshList[GEO_GUN]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_GUN], true);
-	modelStack.PopMatrix(); */
+	modelStack.PopMatrix(); 
 
 
 
