@@ -1,11 +1,16 @@
 #include "SceneManager.h"
+#include "SceneLobby.h"
+#include "SceneDucks.h"
+#include "SceneShooting.h"
+#include "SceneCans.h"
+#include "SceneTank.h"
 
 SceneManager* SceneManager::m_instance = nullptr;
 
 SceneManager::SceneManager(void)
     : currentScene(nullptr)
-    , currentSceneType(SCENE_MENU)
-    , nextSceneType(SCENE_MENU)
+	, currentSceneType(SCENE_LOBBY) //switch to lobby first since menu is not implemented yet
+    , nextSceneType(SCENE_LOBBY)
     , needsSwitch(false)
 {
     // Initialize all scene pointers to nullptr
@@ -40,12 +45,15 @@ void SceneManager::DestroyInstance(void)
 void SceneManager::Init(void)
 {
     // Create all scenes
-    /*scenes[SCENE_MENU] = new SceneMenu();
-    scenes[SCENE_START] = new SceneStart();
-    scenes[SCENE_END] = new SceneEnd();*/
+    //scenes[SCENE_MENU] = new SceneMenu();
+	scenes[SCENE_LOBBY] = new SceneLobby();
+    scenes[SCENE_DUCKS] = new SceneDucks();
+    scenes[SCENE_SHOOTING] = new SceneShooting();
+    scenes[SCENE_CANS] = new SceneCans();
+    scenes[SCENE_TANK] = new SceneTank();
 
     // Initialize the first scene
-    currentSceneType = SCENE_START;
+    currentSceneType = SCENE_LOBBY;
     currentScene = scenes[currentSceneType];
     currentScene->Init();
 }

@@ -7,6 +7,14 @@
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
+#include "SceneManager.h"
+#include <iostream>
+
+struct Door {
+	glm::vec3 position;
+	float width, height;
+	SceneManager::SCENE_TYPE leadsTo;// Which scene this door leads to
+};
 
 class SceneLobby : public Scene
 {
@@ -18,15 +26,6 @@ public:
 		GEO_CUBE,
 		GEO_PLANE,
 
-		OBJ_CASH_REGISTER,
-
-		OBJ_MAN,
-		OBJ_ENTITY,
-
-		OBJ_TACO,
-
-		GEO_SHUTTER,
-
 		GEO_LEFT,
 		GEO_RIGHT,
 		GEO_TOP,
@@ -34,19 +33,11 @@ public:
 		GEO_FRONT,
 		GEO_BACK,
 
-		GEO_KIOSK_FLOOR,
-		GEO_KIOSK_WALL,
-		GEO_KIOSK_COUNTER,
-		GEO_KIOSK_ROOF,
-
 		GEO_DOOR_HOLE,
 		GEO_DOOR,
 
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
-
-		GEO_SHUTTER_BUTTON,
-		GEO_SHUTTER_BUTTON_PRESS,
 
 		GEO_GUI,
 
@@ -135,10 +126,8 @@ private:
 	bool enableLight;
 
 
-
-
-
 	// ANIMATIONS/INTERACTIONS
+	
 	// door
 	float doorRotation;  // 0 = closed, 90 = open
 	bool isDoorOpen;
@@ -146,13 +135,18 @@ private:
 	// Helper function to check if player is near door
 	bool IsPlayerNearDoor(float radius);
 
+	Door doors[4]; // Assuming 4 doors in the lobby
+	int activeDoorIndex;
+	bool showInteractPrompt;
+
+
 
 	// light 
-	glm::vec3 lightSwitchPosition;
+	/*glm::vec3 lightSwitchPosition;
 	bool isLightSwitchOn;
 	float leverRotation;
 
-	bool IsPlayerNearLightSwitch(float radius);
+	bool IsPlayerNearLightSwitch(float radius);*/
 
 
 	// shutter
@@ -167,17 +161,17 @@ private:
 
 	// Game state
 	GameState gameState;
-	CustomerState customerState;
+	//CustomerState customerState;
 
-	int playerLives;
-	int customersServed;  // Total correct serves to win
+	//int playerLives;
+	//int customersServed;  // Total correct serves to win
 
-	glm::vec3 npcPosition;
-	bool isMonster;        // Is current customer a monster?
-	bool hasTaco;         // Is player holding taco?
-	float customerTimer;  // Timer for customer events
+	//glm::vec3 npcPosition;
+	//bool isMonster;        // Is current customer a monster?
+	//bool hasTaco;         // Is player holding taco?
+	//float customerTimer;  // Timer for customer events
 
-	bool showNPC;         // Simple flag to show/hide NPC
+	//bool showNPC;         // Simple flag to show/hide NPC
 
 
 

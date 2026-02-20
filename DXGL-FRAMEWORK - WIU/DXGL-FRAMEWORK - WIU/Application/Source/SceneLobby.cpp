@@ -1,4 +1,4 @@
-#include "SceneLobby.h"
+﻿#include "SceneLobby.h"
 #include "GL\glew.h"
 
 // GLM Headers
@@ -95,6 +95,8 @@ void SceneLobby::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
+	meshList[GEO_DOOR] = MeshBuilder::GenerateQuad("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
+
 	// OBJ Models
 
 
@@ -120,7 +122,7 @@ void SceneLobby::Init()
 
 
 
-	// In Init() � change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
+	// In Init() — change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
@@ -159,9 +161,33 @@ void SceneLobby::Init()
 
 	enableLight = true;
 
+	// Define 4 doors positioned around the lobby
+	doors[0] = { glm::vec3(-8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_DUCKS}; 
+	doors[1] = { glm::vec3(8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_SHOOTING };  
+	doors[2] = { glm::vec3(0.0f, 0.0f, 8.0f), 2.5f, 1.5f, SceneManager::SCENE_CANS };  
+	doors[3] = { glm::vec3(0.0f, 0.0f, -8.0f), 2.5f, 1.5f, SceneManager::SCENE_TANK };  
 
 }
 
+
+bool SceneLobby::IsPlayerNearDoor(float radius)
+{
+	activeDoorIndex = -1;
+
+	//loop through all doors and check distance to player
+	for (int i = 0; i < 4; i++)
+	{
+		glm::vec3 diff = camera.position - doors[i].position;
+		float dist = glm::length(diff);
+
+		if (dist < radius)
+		{
+			activeDoorIndex = i; //if near door set active door index for interaction
+			return true;
+		}
+	}
+	return false;
+}
 
 
 
@@ -192,18 +218,56 @@ void SceneLobby::Update(double dt)
 	camera.Update(dt);
 
 
-
-
-
-
-
-
-
-
-
-
+	
 
 	// === ANIMATION/INTERACTIONS ====
+	// Door
+	// Check if player is near any door
+	showInteractPrompt = IsPlayerNearDoor(2.5f);
+
+	//if player is near a door and presses E, start opening the door
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyDown('E') && activeDoorIndex >= 0)
+	{
+		isDoorOpen = true;
+	}
+
+	// Animate door open/close
+	if (isDoorOpen && doorRotation < 90.f)
+	{
+		doorRotation += (float)(90.0 / 1.0 * dt); // reaches 90 in ~1 second
+		if (doorRotation >= 90.f)
+			doorRotation = 90.f;
+	}
+	else if (!isDoorOpen && doorRotation > 0.f)
+	{
+		doorRotation -= (float)(90.0 / 1.0 * dt);
+		if (doorRotation <= 0.f)
+			doorRotation = 0.f;
+	}
+
+	// Once door is fully open
+	if (isDoorOpen && doorRotation >= 90.f && activeDoorIndex >= 0)
+	{
+		//check for collision and switch scene if they walk through
+		for (int i = 0; i < 4; i++)
+		{
+			// Simple AABB check between player and door
+			float dx = abs(camera.position.x - doors[i].position.x);
+			float dz = abs(camera.position.z - doors[i].position.z);
+
+			if (dx < doors[i].width * 0.5f + playerSize.x &&
+				dz < doors[i].height * 0.5f + playerSize.z)
+			{
+				// Player walked into this door — switch scene
+				SceneManager::GetInstance()->SwitchScene(doors[activeDoorIndex].leadsTo);
+
+				// Reset for when player returns
+				isDoorOpen = false;
+				doorRotation = 0.f;
+				activeDoorIndex = -1;
+			}
+		}
+	}
 
 
 
@@ -257,13 +321,24 @@ void SceneLobby::Render()
 	modelStack.PopMatrix();
 
 
-	// render tests
-
 
 	// Skybox NIGHT
 	//RenderSkybox();
 
+	//render walls
+	for (int i = 0; i < 4; i++)
+	{
+		modelStack.PushMatrix();
+		modelStack.Translate(doors[i].position.x, doors[i].position.y, doors[i].position.z);
 
+		// Rotate open if this is the active door being opened
+		if (i == activeDoorIndex)
+			modelStack.Rotate(doorRotation, 0, 1, 0);
+
+		modelStack.Scale(doors[i].width, doors[i].height, 0.2f);
+		RenderMesh(meshList[GEO_DOOR], true);
+		modelStack.PopMatrix();
+	}
 
 }
 
@@ -472,6 +547,15 @@ void SceneLobby::HandleKeyPress()
 		}
 
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
+	}
+
+	// E to interact with door
+	if (KeyboardController::GetInstance()->IsKeyPressed('E'))
+	{
+		if (showInteractPrompt && activeDoorIndex >= 0)
+		{
+			isDoorOpen = true; // triggers the open animation → then SwitchScene
+		}
 	}
 
 }

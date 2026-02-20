@@ -11,10 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
-#include "SceneWIU.h"
-
-
+#include "SceneManager.h"
 #include "KeyboardController.h"
 #include "MouseController.h"
 
@@ -149,22 +146,47 @@ void Application::Init()
 
 void Application::Run()
 {
-	//Main Loop
-	Scene *scene = new SceneWIU();
-	scene->Init();
+	//initialize the scene manager and set the first scene to be the lobby
+	SceneManager::GetInstance()->Init();
 
 	m_timer.startTimer();    // Start timer to calculate how long it takes to render this frame
 	while (!glfwWindowShouldClose(m_window) && !IsKeyPressed(VK_ESCAPE))
 	{
-		scene->Update(m_timer.getElapsedTime());
-		scene->Render();
+
+		// Handle scene switching with ENTER key for testing purposes
+		if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_ENTER))
+		{
+			SceneManager::SCENE_TYPE current = SceneManager::GetInstance()->GetCurrentSceneType();
+
+			if (current == SceneManager::SCENE_LOBBY)
+			{
+				SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_DUCKS);
+			}
+			else if (current == SceneManager::SCENE_DUCKS)
+			{
+				SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_SHOOTING);
+			}
+			else if (current == SceneManager::SCENE_SHOOTING)
+			{
+				SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_CANS);
+			}
+			else if (current == SceneManager::SCENE_CANS)
+			{
+				SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_TANK);
+			}
+			else if (current == SceneManager::SCENE_TANK)
+			{
+				SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_MENU);
+			}
+		}
+
+		SceneManager::GetInstance()->Update(m_timer.getElapsedTime());
+		SceneManager::GetInstance()->Render();
 
 		//Swap buffers
 		glfwSwapBuffers(m_window);
 
 		KeyboardController::GetInstance()->PostUpdate();
-
-
 
 		KeyboardController::GetInstance()->PostUpdate();
 		MouseController::GetInstance()->PostUpdate();
@@ -178,12 +200,12 @@ void Application::Run()
         m_timer.waitUntil(frameTime);       // Frame rate limiter. Limits each frame to a specified time in ms.   
 
 	} //Check if the ESC key had been pressed or if the window had been closed
-	scene->Exit();
-	delete scene;
+	SceneManager::GetInstance()->Exit();
 }
 
 void Application::Exit()
 {
+	SceneManager::DestroyInstance();
 	KeyboardController::DestroyInstance();
 
 	//Close OpenGL window and terminate GLFW

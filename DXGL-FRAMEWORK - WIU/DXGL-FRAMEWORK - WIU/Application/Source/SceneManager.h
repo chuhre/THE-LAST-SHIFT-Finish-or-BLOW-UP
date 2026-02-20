@@ -4,13 +4,25 @@
 #include <bitset>
 #include "Scene.h"
 
+
+class SceneLobby;
+class SceneDucks;
+class SceneShooting;
+class SceneCans;
+class SceneTank;
+
+
 class SceneManager
 {
 public:
     enum SCENE_TYPE
     {
-        SCENE_MENU = 0,
-        SCENE_START,
+        SCENE_MENU,
+        SCENE_LOBBY = 0,
+        SCENE_DUCKS,
+        SCENE_SHOOTING,
+        SCENE_CANS,
+        SCENE_TANK,
         SCENE_END,
         SCENE_TOTAL
     };
@@ -20,6 +32,7 @@ private:
 
     Scene* scenes[SCENE_TOTAL];
     Scene* currentScene;
+    SCENE_TYPE prevSceneType;
     SCENE_TYPE currentSceneType;
     SCENE_TYPE nextSceneType;
     bool needsSwitch;
@@ -38,6 +51,9 @@ public:
 
     void SwitchScene(SCENE_TYPE sceneType);
     SCENE_TYPE GetCurrentSceneType(void);
+    SCENE_TYPE leadsTo;
+    bool gameCompleted[4];    // track which games are done
+    bool getIsGameCompleted(int index) { return gameCompleted[index]; }
 
 };
 #endif
