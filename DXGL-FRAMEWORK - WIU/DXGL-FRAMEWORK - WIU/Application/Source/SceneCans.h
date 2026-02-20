@@ -7,6 +7,9 @@
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
+#include "SceneManager.h"
+#include <iostream>
+
 
 class SceneCans : public Scene
 {
@@ -18,15 +21,7 @@ public:
 		GEO_CUBE,
 		GEO_PLANE,
 
-		OBJ_CASH_REGISTER,
-
-		OBJ_MAN,
-		OBJ_ENTITY,
-
-		OBJ_TACO,
-
-		GEO_SHUTTER,
-
+		
 		GEO_LEFT,
 		GEO_RIGHT,
 		GEO_TOP,
@@ -34,19 +29,11 @@ public:
 		GEO_FRONT,
 		GEO_BACK,
 
-		GEO_KIOSK_FLOOR,
-		GEO_KIOSK_WALL,
-		GEO_KIOSK_COUNTER,
-		GEO_KIOSK_ROOF,
-
 		GEO_DOOR_HOLE,
 		GEO_DOOR,
 
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
-
-		GEO_SHUTTER_BUTTON,
-		GEO_SHUTTER_BUTTON_PRESS,
 
 		GEO_GUI,
 
@@ -96,14 +83,6 @@ public:
 		GAME_LOST
 	};
 
-	enum CustomerState
-	{
-		CUSTOMER_NONE = 0,
-		CUSTOMER_WAITING,
-		CUSTOMER_ORDERED,
-		CUSTOMER_IS_MONSTER
-	};
-
 
 	SceneCans();
 	~SceneCans();
@@ -116,7 +95,13 @@ public:
 private:
 	void HandleKeyPress();
 	void RenderMesh(Mesh* mesh, bool enableLight);
+	void RenderSkybox();
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y,float sizex, float sizey);
+	void RenderText(Mesh* mesh, std::string text, glm::vec3	color);
+	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
+	void HandleMouseInput();
 
+	
 	unsigned m_vertexArrayID;
 	Mesh* meshList[NUM_GEOMETRY];
 
@@ -139,13 +124,6 @@ private:
 
 
 	// ANIMATIONS/INTERACTIONS
-	// door
-	float doorRotation;  // 0 = closed, 90 = open
-	bool isDoorOpen;
-	glm::vec3 doorPosition; // Store door position
-	// Helper function to check if player is near door
-	bool IsPlayerNearDoor(float radius);
-
 
 	// light 
 	glm::vec3 lightSwitchPosition;
@@ -167,35 +145,12 @@ private:
 
 	// Game state
 	GameState gameState;
-	CustomerState customerState;
-
-	int playerLives;
-	int customersServed;  // Total correct serves to win
-
-	glm::vec3 npcPosition;
-	bool isMonster;        // Is current customer a monster?
-	bool hasTaco;         // Is player holding taco?
-	float customerTimer;  // Timer for customer events
-
-	bool showNPC;         // Simple flag to show/hide NPC
-
-
 
 	// Collision detection
 	glm::vec3 playerSize;
 	bool CheckWallCollision(const glm::vec3& pos);
 
-	void RenderSkybox();
-	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
-		float sizex, float sizey);
-
-	void HandleMouseInput();
-
-	void RenderText(Mesh* mesh, std::string text, glm::vec3
-		color);
-	void RenderTextOnScreen(Mesh* mesh, std::string text,
-		glm::vec3 color, float size, float x, float y);
-
+	
 	float fps = 0;
 };
 

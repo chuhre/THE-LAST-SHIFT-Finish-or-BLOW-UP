@@ -131,8 +131,6 @@ Mesh* MeshBuilder::GenerateQuad(const std::string& meshName, glm::vec3
 Mesh* MeshBuilder::GenerateSphere(const std::string& meshName,
 	glm::vec3 color, float radius, int numSlice, int numStack)
 {
-	
-	
 	Vertex v;
 	std::vector<Vertex> vertex_buffer_data;
 	std::vector<GLuint> index_buffer_data;
@@ -160,7 +158,7 @@ Mesh* MeshBuilder::GenerateSphere(const std::string& meshName,
 					glm::cos(theta), glm::sin(phi), glm::cos(phi) *
 					glm::sin(theta));
 			
-			
+            v.texCoord = glm::vec2((float)slice / numSlice, (float)stack / numStack);
 			vertex_buffer_data.push_back(v);
 		}
 	}
@@ -211,44 +209,54 @@ Mesh* MeshBuilder::GenerateTriangularPrism(const std::string& meshName, glm::vec
     // Front face (triangle) - indices 0, 1, 2
     v.pos = glm::vec3(-halfBase, 0, halfDepth);
     v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-left
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(halfBase, 0, halfDepth);
     v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-right
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, halfDepth);
     v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.5f, 1.f);  // Top-center
     vertex_buffer_data.push_back(v);
 
     // Back face (triangle) - indices 3, 4, 5
     v.pos = glm::vec3(-halfBase, 0, -halfDepth);
     v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-left (mirrored)
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, -halfDepth);
     v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.5f, 1.f);  // Top-center
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(halfBase, 0, -halfDepth);
     v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-right (mirrored)
     vertex_buffer_data.push_back(v);
 
     // Bottom face (rectangle) - indices 6, 7, 8, 9
     v.pos = glm::vec3(-halfBase, 0, halfDepth);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);   // Front-left
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(-halfBase, 0, -halfDepth);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Back-left
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(halfBase, 0, halfDepth);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Front-right
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(halfBase, 0, -halfDepth);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);   // Back-right
     vertex_buffer_data.push_back(v);
 
     // Left slant face - indices 10, 11, 12, 13
@@ -256,18 +264,22 @@ Mesh* MeshBuilder::GenerateTriangularPrism(const std::string& meshName, glm::vec
 
     v.pos = glm::vec3(-halfBase, 0, halfDepth);
     v.normal = leftNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-front
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, halfDepth);
     v.normal = leftNormal;
+    v.texCoord = glm::vec2(1.f, 0.f);   // Top-front
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(-halfBase, 0, -halfDepth);
     v.normal = leftNormal;
+    v.texCoord = glm::vec2(0.f, 1.f);   // Bottom-back
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, -halfDepth);
     v.normal = leftNormal;
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-back
     vertex_buffer_data.push_back(v);
 
     // Right slant face - indices 14, 15, 16, 17
@@ -275,19 +287,24 @@ Mesh* MeshBuilder::GenerateTriangularPrism(const std::string& meshName, glm::vec
 
     v.pos = glm::vec3(halfBase, 0, -halfDepth);
     v.normal = rightNormal;
+    v.texCoord = glm::vec2(0.f, 1.f);   // Bottom-back
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, -halfDepth);
     v.normal = rightNormal;
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-back
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(halfBase, 0, halfDepth);
     v.normal = rightNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-front
     vertex_buffer_data.push_back(v);
 
     v.pos = glm::vec3(0, height, halfDepth);
     v.normal = rightNormal;
+    v.texCoord = glm::vec2(1.f, 0.f);   // Top-front
     vertex_buffer_data.push_back(v);
+
 
     // Indices - all with counter-clockwise winding when viewed from outside
     // Front face
@@ -553,6 +570,7 @@ Mesh* MeshBuilder::GenerateHemisphere(const std::string& meshName, glm::vec3 col
 		float theta = slice * degreePerSlice;
 		v.pos = glm::vec3(radius * glm::cos(theta), 0, radius * glm::sin(theta));
 		v.normal = glm::vec3(0, -1, 0);
+        v.texCoord = glm::vec2(0.5f + 0.5f * glm::cos(theta), 0.5f + 0.5f * glm::sin(theta));
 		vertex_buffer_data.push_back(v);
 	}
 
@@ -577,6 +595,7 @@ Mesh* MeshBuilder::GenerateHemisphere(const std::string& meshName, glm::vec3 col
 			v.normal = glm::vec3(glm::cos(phi) * glm::cos(theta),
 				glm::sin(phi),
 				glm::cos(phi) * glm::sin(theta));
+            v.texCoord = glm::vec2((float)slice / numSlice, (float)stack / numStack);
 			vertex_buffer_data.push_back(v);
 		}
 	}
@@ -615,123 +634,129 @@ Mesh* MeshBuilder::GenerateCube(const std::string& meshName, glm::vec3 color, fl
     std::vector<GLuint> index_buffer_data;
 
     // Front face (+Z)
-    v.pos = glm::vec3(0.5f * length, 0.5f * length, 0.5f * length);
     v.normal = glm::vec3(0, 0, 1);
+    v.pos = glm::vec3(0.5f * length, 0.5f * length, 0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Right face (+X)
-    v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
     v.normal = glm::vec3(1, 0, 0);
+    v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(1, 0, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(1, 0, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Top face (+Y)
-    v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
     v.normal = glm::vec3(0, 1, 0);
+    v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Back face (-Z)
-    v.pos = glm::vec3(-0.5f * length, 0.5f * length, -0.5f * length);
     v.normal = glm::vec3(0, 0, -1);
+    v.pos = glm::vec3(-0.5f * length, 0.5f * length, -0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Left face (-X)
-    v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
     v.normal = glm::vec3(-1, 0, 0);
+    v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(-1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(-1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, 0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(-1, 0, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(-1, 0, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(-1, 0, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Bottom face (-Y)
-    v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
     v.normal = glm::vec3(0, -1, 0);
+    v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, -0.5f * length);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-0.5f * length, -0.5f * length, 0.5f * length);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Indices
@@ -769,6 +794,7 @@ Mesh* MeshBuilder::GenerateCylinder(const std::string& meshName, glm::vec3 color
     // Bottom center
     v.pos = glm::vec3(0, -0.5f * height, 0);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.5f, 0.5f);  // Center of bottom cap
     vertex_buffer_data.push_back(v);
 
     // Bottom circle
@@ -776,6 +802,7 @@ Mesh* MeshBuilder::GenerateCylinder(const std::string& meshName, glm::vec3 color
     {
         float theta = slice * degreePerSlice;
         v.pos = glm::vec3(radius * glm::cos(theta), -0.5f * height, radius * glm::sin(theta));
+        v.texCoord = glm::vec2(0.5f + 0.5f * glm::cos(theta), 0.5f + 0.5f * glm::sin(theta));
         v.normal = glm::vec3(0, -1, 0);
         vertex_buffer_data.push_back(v);
     }
@@ -792,15 +819,18 @@ Mesh* MeshBuilder::GenerateCylinder(const std::string& meshName, glm::vec3 color
     for (unsigned slice = 0; slice <= numSlice; ++slice)
     {
         float theta = slice * degreePerSlice;
+        float u = (float)slice / numSlice;
 
         // Bottom vertex
         v.pos = glm::vec3(radius * glm::cos(theta), -height * 0.5f, radius * glm::sin(theta));
         v.normal = glm::vec3(glm::cos(theta), 0, glm::sin(theta));
+        v.texCoord = glm::vec2(u, 0.f);  // Bottom of side
         vertex_buffer_data.push_back(v);
 
         // Top vertex
         v.pos = glm::vec3(radius * glm::cos(theta), height * 0.5f, radius * glm::sin(theta));
         v.normal = glm::vec3(glm::cos(theta), 0, glm::sin(theta));
+        v.texCoord = glm::vec2(u, 1.f);  // Top of side
         vertex_buffer_data.push_back(v);
     }
 
@@ -815,6 +845,7 @@ Mesh* MeshBuilder::GenerateCylinder(const std::string& meshName, glm::vec3 color
     unsigned topStartIndex = vertex_buffer_data.size();
     v.pos = glm::vec3(0, 0.5f * height, 0);
     v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.5f, 0.5f);  // Center of top cap
     vertex_buffer_data.push_back(v);
 
     // Top circle
@@ -823,6 +854,7 @@ Mesh* MeshBuilder::GenerateCylinder(const std::string& meshName, glm::vec3 color
         float theta = slice * degreePerSlice;
         v.pos = glm::vec3(radius * glm::cos(theta), 0.5f * height, radius * glm::sin(theta));
         v.normal = glm::vec3(0, 1, 0);
+        v.texCoord = glm::vec2(0.5f + 0.5f * glm::cos(theta), 0.5f + 0.5f * glm::sin(theta));
         vertex_buffer_data.push_back(v);
     }
 
@@ -863,83 +895,87 @@ Mesh* MeshBuilder::GenerateTrapezoidalPrism(const std::string& meshName, glm::ve
     float halfDepth = depth * 0.5f;
 
     // Front face (+Z) - Trapezoid
-    v.pos = glm::vec3(halfTopWidth, halfHeight, halfDepth);
     v.normal = glm::vec3(0, 0, 1);
+    v.pos = glm::vec3(halfTopWidth, halfHeight, halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-right
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 1.f);   // Top-left
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-left
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-right (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-left (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 0, 1);
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-right
     vertex_buffer_data.push_back(v);
 
     // Back face (-Z) - Trapezoid
-    v.pos = glm::vec3(-halfTopWidth, halfHeight, -halfDepth);
     v.normal = glm::vec3(0, 0, -1);
+    v.pos = glm::vec3(-halfTopWidth, halfHeight, -halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-right (mirrored)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 1.f);   // Top-left (mirrored)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-left (mirrored)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-right (mirrored, repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-left (mirrored, repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 0, -1);
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-right (mirrored)
     vertex_buffer_data.push_back(v);
 
     // Top face (+Y) - Rectangle (smaller)
-    v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
     v.normal = glm::vec3(0, 1, 0);
+    v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, halfDepth);
-    v.normal = glm::vec3(0, 1, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Bottom face (-Y) - Rectangle (larger)
-    v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
     v.normal = glm::vec3(0, -1, 0);
+    v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 1.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.f, 0.f);
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(1.f, 0.f);
     vertex_buffer_data.push_back(v);
 
     // Right slanted face
@@ -947,23 +983,24 @@ Mesh* MeshBuilder::GenerateTrapezoidalPrism(const std::string& meshName, glm::ve
         glm::vec3(0, 0, depth),
         glm::vec3(halfBottomWidth - halfTopWidth, -height, 0)
     ));
-    v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
     v.normal = rightNormal;
+    v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-back
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, halfDepth);
-    v.normal = rightNormal;
+    v.texCoord = glm::vec2(0.f, 1.f);   // Top-front
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = rightNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-front
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfTopWidth, halfHeight, -halfDepth);
-    v.normal = rightNormal;
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-back (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = rightNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-front (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = rightNormal;
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-back
     vertex_buffer_data.push_back(v);
 
     // Left slanted face
@@ -971,23 +1008,24 @@ Mesh* MeshBuilder::GenerateTrapezoidalPrism(const std::string& meshName, glm::ve
         glm::vec3(halfTopWidth - halfBottomWidth, -height, 0),
         glm::vec3(0, 0, depth)
     ));
-    v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
     v.normal = leftNormal;
+    v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-front
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, -halfDepth);
-    v.normal = leftNormal;
+    v.texCoord = glm::vec2(0.f, 1.f);   // Top-back
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = leftNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-back
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfTopWidth, halfHeight, halfDepth);
-    v.normal = leftNormal;
+    v.texCoord = glm::vec2(1.f, 1.f);   // Top-front (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, -halfDepth);
-    v.normal = leftNormal;
+    v.texCoord = glm::vec2(0.f, 0.f);   // Bottom-back (repeat)
     vertex_buffer_data.push_back(v);
     v.pos = glm::vec3(-halfBottomWidth, -halfHeight, halfDepth);
-    v.normal = leftNormal;
+    v.texCoord = glm::vec2(1.f, 0.f);   // Bottom-front
     vertex_buffer_data.push_back(v);
 
     // Indices
@@ -1027,6 +1065,7 @@ Mesh* MeshBuilder::GenerateHalfHemisphere(const std::string& meshName, glm::vec3
     // Bottom center vertex
     v.pos = glm::vec3(0, 0, 0);
     v.normal = glm::vec3(0, -1, 0);
+    v.texCoord = glm::vec2(0.5f, 0.5f);  // Center of bottom half-cap
     vertex_buffer_data.push_back(v);
 
     // Bottom half-circle vertices
@@ -1035,6 +1074,7 @@ Mesh* MeshBuilder::GenerateHalfHemisphere(const std::string& meshName, glm::vec3
         float theta = slice * degreePerSlice;
         v.pos = glm::vec3(radius * glm::cos(theta), 0, radius * glm::sin(theta));
         v.normal = glm::vec3(0, -1, 0);
+        v.texCoord = glm::vec2(0.5f + 0.5f * glm::cos(theta), 0.5f + 0.5f * glm::sin(theta));
         vertex_buffer_data.push_back(v);
     }
 
@@ -1063,6 +1103,7 @@ Mesh* MeshBuilder::GenerateHalfHemisphere(const std::string& meshName, glm::vec3
             v.normal = glm::vec3(glm::cos(phi) * glm::cos(theta),
                 glm::sin(phi),
                 glm::cos(phi) * glm::sin(theta));
+            v.texCoord = glm::vec2((float)slice / numSlice, (float)stack / numStack);
             vertex_buffer_data.push_back(v);
         }
     }
@@ -1099,14 +1140,17 @@ Mesh* MeshBuilder::GenerateHalfHemisphere(const std::string& meshName, glm::vec3
     for (unsigned stack = 0; stack <= numStack; ++stack)
     {
         float phi = stack * degreePerStack;
+        float u = (float)stack / numStack;
 
         // Vertex with normal pointing back (-z direction)
         v.normal = glm::vec3(0, 0, -1);
         v.pos = glm::vec3(radius * glm::cos(phi), radius * glm::sin(phi), 0);
+        v.texCoord = glm::vec2(1.f, u);   // Right edge of flat face
         vertex_buffer_data.push_back(v);
 
         // Center vertex with same normal
         v.pos = glm::vec3(0, 0, 0);
+        v.texCoord = glm::vec2(0.5f, u);  // Center line
         vertex_buffer_data.push_back(v);
     }
 
@@ -1126,14 +1170,17 @@ Mesh* MeshBuilder::GenerateHalfHemisphere(const std::string& meshName, glm::vec3
     for (unsigned stack = 0; stack <= numStack; ++stack)
     {
         float phi = stack * degreePerStack;
+        float u = (float)stack / numStack;
 
         // Center vertex with normal pointing forward (+z direction)
         v.normal = glm::vec3(0, 0, -1);
         v.pos = glm::vec3(0, 0, 0);
+        v.texCoord = glm::vec2(0.5f, u);  // Center line
         vertex_buffer_data.push_back(v);
 
         // Edge vertex with same normal
         v.pos = glm::vec3(-radius * glm::cos(phi), radius * glm::sin(phi), 0);
+        v.texCoord = glm::vec2(0.f, u);   // Left edge of flat face
         vertex_buffer_data.push_back(v);
     }
 

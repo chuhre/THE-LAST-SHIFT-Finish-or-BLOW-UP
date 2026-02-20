@@ -8,13 +8,8 @@
 #include "MatrixStack.h"
 #include "Light.h"
 #include "SceneManager.h"
+#include "Door.h"
 #include <iostream>
-
-struct Door {
-	glm::vec3 position;
-	float width, height;
-	SceneManager::SCENE_TYPE leadsTo;// Which scene this door leads to
-};
 
 class SceneLobby : public Scene
 {
@@ -87,14 +82,6 @@ public:
 		GAME_LOST
 	};
 
-	enum CustomerState
-	{
-		CUSTOMER_NONE = 0,
-		CUSTOMER_WAITING,
-		CUSTOMER_ORDERED,
-		CUSTOMER_IS_MONSTER
-	};
-
 
 	SceneLobby();
 	~SceneLobby();
@@ -107,6 +94,12 @@ public:
 private:
 	void HandleKeyPress();
 	void RenderMesh(Mesh* mesh, bool enableLight);
+	void RenderSkybox();
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
+	void RenderText(Mesh* mesh, std::string text, glm::vec3	color);
+	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
+
+	void HandleMouseInput();
 
 	unsigned m_vertexArrayID;
 	Mesh* meshList[NUM_GEOMETRY];
@@ -129,13 +122,8 @@ private:
 	// ANIMATIONS/INTERACTIONS
 	
 	// door
-	float doorRotation;  // 0 = closed, 90 = open
-	bool isDoorOpen;
-	glm::vec3 doorPosition; // Store door position
-	// Helper function to check if player is near door
-	bool IsPlayerNearDoor(float radius);
-
-	Door doors[4]; // Assuming 4 doors in the lobby
+	static const int NUM_DOORS = 4;
+	Door doors[NUM_DOORS];
 	int activeDoorIndex;
 	bool showInteractPrompt;
 
@@ -161,34 +149,13 @@ private:
 
 	// Game state
 	GameState gameState;
-	//CustomerState customerState;
-
-	//int playerLives;
-	//int customersServed;  // Total correct serves to win
-
-	//glm::vec3 npcPosition;
-	//bool isMonster;        // Is current customer a monster?
-	//bool hasTaco;         // Is player holding taco?
-	//float customerTimer;  // Timer for customer events
-
-	//bool showNPC;         // Simple flag to show/hide NPC
-
-
+	
 
 	// Collision detection
 	glm::vec3 playerSize;
 	bool CheckWallCollision(const glm::vec3& pos);
 
-	void RenderSkybox();
-	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
-		float sizex, float sizey);
-
-	void HandleMouseInput();
-
-	void RenderText(Mesh* mesh, std::string text, glm::vec3
-		color);
-	void RenderTextOnScreen(Mesh* mesh, std::string text,
-		glm::vec3 color, float size, float x, float y);
+	
 
 	float fps = 0;
 };

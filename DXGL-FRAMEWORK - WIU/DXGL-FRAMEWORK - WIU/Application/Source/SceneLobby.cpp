@@ -95,7 +95,7 @@ void SceneLobby::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
-	meshList[GEO_DOOR] = MeshBuilder::GenerateQuad("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
+	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
 
 	// OBJ Models
 
@@ -164,29 +164,9 @@ void SceneLobby::Init()
 	// Define 4 doors positioned around the lobby
 	doors[0] = { glm::vec3(-8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_DUCKS}; 
 	doors[1] = { glm::vec3(8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_SHOOTING };  
-	doors[2] = { glm::vec3(0.0f, 0.0f, 8.0f), 2.5f, 1.5f, SceneManager::SCENE_CANS };  
-	doors[3] = { glm::vec3(0.0f, 0.0f, -8.0f), 2.5f, 1.5f, SceneManager::SCENE_TANK };  
+	doors[2] = { glm::vec3(0.0f, 0.0f, 8.0f), 1.5f, 2.5f, SceneManager::SCENE_CANS };  
+	doors[3] = { glm::vec3(0.0f, 0.0f, -8.0f), 1.5f, 2.5f, SceneManager::SCENE_TANK };  
 
-}
-
-
-bool SceneLobby::IsPlayerNearDoor(float radius)
-{
-	activeDoorIndex = -1;
-
-	//loop through all doors and check distance to player
-	for (int i = 0; i < 4; i++)
-	{
-		glm::vec3 diff = camera.position - doors[i].position;
-		float dist = glm::length(diff);
-
-		if (dist < radius)
-		{
-			activeDoorIndex = i; //if near door set active door index for interaction
-			return true;
-		}
-	}
-	return false;
 }
 
 
@@ -222,53 +202,45 @@ void SceneLobby::Update(double dt)
 
 	// === ANIMATION/INTERACTIONS ====
 	// Door
-	// Check if player is near any door
-	showInteractPrompt = IsPlayerNearDoor(2.5f);
+	activeDoorIndex = -1;
+	showInteractPrompt = false;
 
-	//if player is near a door and presses E, start opening the door
-	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyDown('E') && activeDoorIndex >= 0)
+	for (int i = 0; i < NUM_DOORS; ++i)
 	{
-		isDoorOpen = true;
-	}
-
-	// Animate door open/close
-	if (isDoorOpen && doorRotation < 90.f)
-	{
-		doorRotation += (float)(90.0 / 1.0 * dt); // reaches 90 in ~1 second
-		if (doorRotation >= 90.f)
-			doorRotation = 90.f;
-	}
-	else if (!isDoorOpen && doorRotation > 0.f)
-	{
-		doorRotation -= (float)(90.0 / 1.0 * dt);
-		if (doorRotation <= 0.f)
-			doorRotation = 0.f;
-	}
-
-	// Once door is fully open
-	if (isDoorOpen && doorRotation >= 90.f && activeDoorIndex >= 0)
-	{
-		//check for collision and switch scene if they walk through
-		for (int i = 0; i < 4; i++)
+		if (doors[i].IsPlayerNear(camera.position, 2.5f))
 		{
-			// Simple AABB check between player and door
-			float dx = abs(camera.position.x - doors[i].position.x);
-			float dz = abs(camera.position.z - doors[i].position.z);
-
-			if (dx < doors[i].width * 0.5f + playerSize.x &&
-				dz < doors[i].height * 0.5f + playerSize.z)
-			{
-				// Player walked into this door — switch scene
-				SceneManager::GetInstance()->SwitchScene(doors[activeDoorIndex].leadsTo);
-
-				// Reset for when player returns
-				isDoorOpen = false;
-				doorRotation = 0.f;
-				activeDoorIndex = -1;
-			}
+			activeDoorIndex = i;
+			showInteractPrompt = true;
+			break;
 		}
 	}
 
+	// E to open the nearest door
+	if (showInteractPrompt && activeDoorIndex >= 0 &&
+		KeyboardController::GetInstance()->IsKeyPressed('E'))
+	{
+		doors[activeDoorIndex].Open();
+	}
+
+	// Update every door; Update() returns true when the player walks through
+	for (int i = 0; i < NUM_DOORS; ++i)
+	{
+		bool playerWalkedThrough = doors[i].Update(dt, camera.position,
+			playerSize.x * 0.5f,
+			playerSize.z * 0.5f);
+		if (playerWalkedThrough)
+		{
+			SceneManager::GetInstance()->SwitchScene(doors[i].leadsTo);
+
+			// Reset the door so it's closed when the player returns
+			doors[i].Close();
+			activeDoorIndex = -1;
+			showInteractPrompt = false;
+			break;
+		}
+	}
+
+	
 
 
 }
@@ -325,17 +297,25 @@ void SceneLobby::Render()
 	// Skybox NIGHT
 	//RenderSkybox();
 
-	//render walls
+	//render doors
 	for (int i = 0; i < 4; i++)
 	{
 		modelStack.PushMatrix();
 		modelStack.Translate(doors[i].position.x, doors[i].position.y, doors[i].position.z);
-
-		// Rotate open if this is the active door being opened
-		if (i == activeDoorIndex)
-			modelStack.Rotate(doorRotation, 0, 1, 0);
-
+		modelStack.Rotate(doors[i].rotation, 0, 1, 0);   // use Door's own rotation
 		modelStack.Scale(doors[i].width, doors[i].height, 0.2f);
+
+		if(i == 0)
+			meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		else if (i==1)
+			meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.5f, 0.1f, 0.1f);
+		else if (i==2)
+			meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.5f, 0.1f);
+		else if (i==3)
+			meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+
+		meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 		RenderMesh(meshList[GEO_DOOR], true);
 		modelStack.PopMatrix();
 	}
@@ -548,16 +528,6 @@ void SceneLobby::HandleKeyPress()
 
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
 	}
-
-	// E to interact with door
-	if (KeyboardController::GetInstance()->IsKeyPressed('E'))
-	{
-		if (showInteractPrompt && activeDoorIndex >= 0)
-		{
-			isDoorOpen = true; // triggers the open animation → then SwitchScene
-		}
-	}
-
 }
 
 void SceneLobby::HandleMouseInput() {
