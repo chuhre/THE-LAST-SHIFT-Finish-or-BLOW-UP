@@ -277,16 +277,22 @@ bool LoadOBJMTL(const char* file_path, const char* mtl_path, std::vector<glm::ve
 		fileStream.getline(buf, 256);
 		if (strncmp("v ", buf, 2) == 0) { 
 			// process vertex glm::vec3
-			// refer to lecture on how to do it
+			glm::vec3 vertex;
+			sscanf_s(buf + 2, "%f %f %f", &vertex.x, &vertex.y, &vertex.z);
+			temp_vertices.push_back(vertex);
 
 		}
 		else if (strncmp("vt ", buf, 3) == 0) { 
 			// process texcoord
-			// refer to lecture on how to do it
+			glm::vec2 uv;
+			sscanf_s(buf + 3, "%f %f", &uv.x, &uv.y);
+			temp_uvs.push_back(uv);
 		}
 		else if (strncmp("vn ", buf, 3) == 0) { 
 			// process normal
-			// refer to lecture on how to do it
+			glm::vec3 normal;
+			sscanf_s(buf + 3, "%f %f %f", &normal.x, &normal.y, &normal.z);
+			temp_normals.push_back(normal);
 		}
 		//else if (strncmp("mtllib ", buf, 7) == 0) { //process mtllib
 		//	char mtl_path[256];
@@ -316,6 +322,16 @@ bool LoadOBJMTL(const char* file_path, const char* mtl_path, std::vector<glm::ve
 
 			if (matches == 9) //triangle (hint: index 0,1,2)
 			{
+				vertexIndices.push_back(vertexIndex[0]);
+				vertexIndices.push_back(vertexIndex[1]);
+				vertexIndices.push_back(vertexIndex[2]);
+				uvIndices.push_back(uvIndex[0]);
+				uvIndices.push_back(uvIndex[1]);
+				uvIndices.push_back(uvIndex[2]);
+				normalIndices.push_back(normalIndex[0]);
+				normalIndices.push_back(normalIndex[1]);
+				normalIndices.push_back(normalIndex[2]);
+
 				if (out_materials.size() > 0)
 				{
 					out_materials.back().size += 3;
@@ -323,6 +339,25 @@ bool LoadOBJMTL(const char* file_path, const char* mtl_path, std::vector<glm::ve
 			}
 			else if (matches == 12) //quad (hint: index 0,1,2 & 0,2,3)
 			{
+				vertexIndices.push_back(vertexIndex[0]);
+				vertexIndices.push_back(vertexIndex[1]);
+				vertexIndices.push_back(vertexIndex[2]);
+				vertexIndices.push_back(vertexIndex[0]);
+				vertexIndices.push_back(vertexIndex[2]);
+				vertexIndices.push_back(vertexIndex[3]);
+				uvIndices.push_back(uvIndex[0]);
+				uvIndices.push_back(uvIndex[1]);
+				uvIndices.push_back(uvIndex[2]);
+				uvIndices.push_back(uvIndex[0]);
+				uvIndices.push_back(uvIndex[2]);
+				uvIndices.push_back(uvIndex[3]);
+				normalIndices.push_back(normalIndex[0]);
+				normalIndices.push_back(normalIndex[1]);
+				normalIndices.push_back(normalIndex[2]);
+				normalIndices.push_back(normalIndex[0]);
+				normalIndices.push_back(normalIndex[2]);
+				normalIndices.push_back(normalIndex[3]);
+
 				if (out_materials.size() > 0)
 				{
 					out_materials.back().size += 6;
