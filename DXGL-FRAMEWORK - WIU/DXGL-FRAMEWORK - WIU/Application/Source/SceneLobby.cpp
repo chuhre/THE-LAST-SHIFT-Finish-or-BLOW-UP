@@ -97,6 +97,9 @@ void SceneLobby::Init()
 
 	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
 
+	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
+	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
+
 	// OBJ Models
 
 
@@ -318,6 +321,9 @@ void SceneLobby::Render()
 		meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 		RenderMesh(meshList[GEO_DOOR], true);
 		modelStack.PopMatrix();
+
+		if (showInteractPrompt)
+			RenderTextOnScreen(meshList[GEO_TEXT], "Press E to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
 	}
 
 }
@@ -586,7 +592,8 @@ void SceneLobby::RenderText(Mesh* mesh, std::string text, glm::vec3
 	{
 		glm::mat4 characterSpacing = glm::translate(
 			glm::mat4(1.f),
-			glm::vec3(i * 1.0f, 0, 0));
+			glm::vec3(0.2f + i * 0.6f, 0.f, 0)
+		);
 		glm::mat4 MVP = projectionStack.Top() * viewStack.Top() *
 			modelStack.Top() * characterSpacing;
 		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE,
@@ -636,7 +643,7 @@ void SceneLobby::RenderTextOnScreen(Mesh* mesh, std::string
 	{
 		glm::mat4 characterSpacing = glm::translate(
 			glm::mat4(1.f),
-			glm::vec3(0.5f + i * 1.0f, 0.5f, 0)
+			glm::vec3(0.2f + i * 0.6f, 0.f, 0)
 		);
 		glm::mat4 MVP = projectionStack.Top() *
 			viewStack.Top() * modelStack.Top() * characterSpacing;

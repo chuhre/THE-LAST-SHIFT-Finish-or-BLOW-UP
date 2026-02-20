@@ -52,7 +52,7 @@ public:
     void SwitchScene(SCENE_TYPE sceneType);
     SCENE_TYPE GetCurrentSceneType(void);
     SCENE_TYPE leadsTo;
-    bool gameCompleted[4];    // track which games are done
+    bool gameCompleted[4] = { false, false, false, false };    // track which games are done
     bool getIsGameCompleted(int index) { return gameCompleted[index]; }
 
 };

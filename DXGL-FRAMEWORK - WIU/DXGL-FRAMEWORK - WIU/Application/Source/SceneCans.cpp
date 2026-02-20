@@ -95,6 +95,11 @@ void SceneCans::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
+	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
+
+	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
+	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
+
 	// OBJ Models
 
 
@@ -159,7 +164,7 @@ void SceneCans::Init()
 
 	enableLight = true;
 
-
+	door = { glm::vec3(-8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
 }
 
 
@@ -192,21 +197,37 @@ void SceneCans::Update(double dt)
 	camera.Update(dt);
 
 
-
-
-
-
-
-
-
-
-
-
-
 	// === ANIMATION/INTERACTIONS ====
+	//Door interaction
+	showInteractPrompt = false;
+	if (door.IsPlayerNear(camera.position, 2.5f))
+	{
+		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_CANS))
+			showInteractPrompt = true;
+			
+		else 
+			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
+	}
+
+	// E to open the door
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('E'))
+	{
+		door.Open();
+	}
+
+	bool playerWalkedThrough = door.Update(dt, camera.position,	playerSize.x * 0.5f,playerSize.z * 0.5f);
+	if (playerWalkedThrough)
+	{
+		SceneManager::GetInstance()->SwitchScene(door.leadsTo);
+		door.Close();
+		showInteractPrompt = false;
+	}
 
 
+	//check if player wins
 
+	//if player wins
+	SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = true;
 }
 
 void SceneCans::Render()
@@ -256,15 +277,22 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
 
-
-	// render tests
-
-
 	// Skybox NIGHT
 	//RenderSkybox();
 
-
-
+	//render door
+	modelStack.PushMatrix();
+	modelStack.Translate(door.position.x, door.position.y, door.position.z);
+	modelStack.Rotate(door.rotation, 0, 1, 0);   // use Door's own rotation
+	modelStack.Scale(door.width, door.height, 0.2f);
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_DOOR], true);
+	modelStack.PopMatrix();
+	
+	if(showInteractPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press E to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50 );
 }
 
 void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
@@ -532,7 +560,8 @@ void SceneCans::RenderText(Mesh* mesh, std::string text, glm::vec3
 	{
 		glm::mat4 characterSpacing = glm::translate(
 			glm::mat4(1.f),
-			glm::vec3(i * 1.0f, 0, 0));
+			glm::vec3(0.2f + i * 0.6f, 0.f, 0)
+		);
 		glm::mat4 MVP = projectionStack.Top() * viewStack.Top() *
 			modelStack.Top() * characterSpacing;
 		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE,
@@ -582,7 +611,7 @@ void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
 	{
 		glm::mat4 characterSpacing = glm::translate(
 			glm::mat4(1.f),
-			glm::vec3(0.5f + i * 1.0f, 0.5f, 0)
+			glm::vec3(0.2f + i * 0.6f, 0.f, 0)
 		);
 		glm::mat4 MVP = projectionStack.Top() *
 			viewStack.Top() * modelStack.Top() * characterSpacing;

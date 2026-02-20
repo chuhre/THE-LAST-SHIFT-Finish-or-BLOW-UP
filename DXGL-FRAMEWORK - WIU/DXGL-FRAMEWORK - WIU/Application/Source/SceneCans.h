@@ -9,7 +9,7 @@
 #include "Light.h"
 #include "SceneManager.h"
 #include <iostream>
-
+#include "Door.h"
 
 class SceneCans : public Scene
 {
@@ -120,10 +120,12 @@ private:
 	bool enableLight;
 
 
-
-
-
 	// ANIMATIONS/INTERACTIONS
+
+	// door
+	static const int NUM_DOORS = 1;
+	Door door;
+	bool showInteractPrompt;
 
 	// light 
 	glm::vec3 lightSwitchPosition;
