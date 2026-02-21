@@ -26,6 +26,7 @@ public:
 		GEO_FRONT,
 		GEO_BACK,*/
 
+		GEO_OBJ,
 		
 		// Environment
 		GEO_FLOOR,

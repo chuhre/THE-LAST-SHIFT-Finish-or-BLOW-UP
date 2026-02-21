@@ -98,12 +98,21 @@ void SceneShooting::Init()
 	// OBJ Models
 
 	// props
-	/*meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(1.f, 1.f, 1.f), 10.f, 1.f, 2.f);
-	meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateRectangularPrism("Target Rail", glm::vec3(1.f, 1.f, 1.f), 10.f, 0.5f, 0.5f);
-	meshList[GEO_TARGET] = MeshBuilder::GenerateSphere("Target", glm::vec3(1.f, 0.f, 0.f), 0.5f, 16, 16);
-	meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.f, 0.f, 0.f), 0.5f, 16, 16);*/
-	meshList[GEO_GUN] = MeshBuilder::GenerateOBJ("Gun", "Models//Toy_Gun.obj");
-	//meshList[GEO_GUN]->textureID = LoadTGA("Images//doorman.tga");
+	//meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(1.f, 1.f, 1.f), 10.f, 1.f, 2.f);
+	//meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateRectangularPrism("Target Rail", glm::vec3(1.f, 1.f, 1.f), 10.f, 0.5f, 0.5f);
+	
+	/*meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//Target.obj", "Models//Target.mtl");
+	meshList[GEO_TARGET]->textureID = LoadTGA("Images//TargetMat_baseColor.tga");*/
+
+	meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//target.obj", "Models//target.mtl");
+	meshList[GEO_TARGET]->textureID = LoadTGA("Images//target_baseColor.tga");
+	
+	//meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.f, 0.f, 0.f), 0.5f, 16, 16);
+	
+	//meshList[GEO_GUN] = MeshBuilder::GenerateOBJ("Gun", "Models//GunToy.obj");
+	meshList[GEO_GUN] = MeshBuilder::GenerateOBJMTL("Gun", "Models//GunToy.obj", "Models//GunToy.mtl");
+	meshList[GEO_GUN]->textureID = LoadTGA("Images//Toy_Gun_body1_BaseColor.tga");
+	
 
 
 
@@ -280,7 +289,7 @@ void SceneShooting::Render()
 
 	// render tests
 
-	modelStack.PushMatrix();
+	/*modelStack.PushMatrix();
 	modelStack.Translate(0.f, 5.f, 0.f);
 	modelStack.Scale(10.f, 10.f, 1.f);
 
@@ -290,7 +299,7 @@ void SceneShooting::Render()
 	meshList[GEO_WALL]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_WALL], true);
-	modelStack.PopMatrix();
+	modelStack.PopMatrix();*/
 
 
 
@@ -307,9 +316,28 @@ void SceneShooting::Render()
 	modelStack.PopMatrix();*/
 
 
+	/*modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Scale(0.2f, 0.2f, 0.2f);
+
+	meshList[GEO_OBJ]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_OBJ]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_OBJ]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_OBJ]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_OBJ], true);
+	modelStack.PopMatrix();*/
+
+
+	
+	
+	
+	
+	
+	// gun obj
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, -1.f, 0.f);
-	modelStack.Scale(0.1f, 0.1f, 0.1f);
+	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Scale(0.2f, 0.2f, 0.2f);
 
 	meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
 	meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
@@ -319,6 +347,20 @@ void SceneShooting::Render()
 	RenderMesh(meshList[GEO_GUN], true);
 	modelStack.PopMatrix(); 
 
+
+	// target obj
+	modelStack.PushMatrix();
+	modelStack.Translate(5.f, 0.f, 0.f);
+	modelStack.Scale(1.5f, 1.5f, 1.5f);
+	modelStack.Rotate(90.0f, 0, 1, 0);
+
+	meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_TARGET]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_TARGET], true);
+	modelStack.PopMatrix();
 
 
 
