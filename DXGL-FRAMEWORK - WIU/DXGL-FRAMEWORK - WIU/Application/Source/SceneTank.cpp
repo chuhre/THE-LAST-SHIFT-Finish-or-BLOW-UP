@@ -96,7 +96,10 @@ void SceneTank::Init()
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	// OBJ Models
-
+	meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//target.obj", "Models//target.mtl");
+	meshList[GEO_TARGET]->textureID = LoadTGA("Images//target_baseColor.tga");
+	meshList[GEO_TANK] = MeshBuilder::GenerateOBJMTL("Tank", "Models//cup.obj", "Models//cup.mtl");
+	//meshList[GEO_TANK] = MeshBuilder::GenerateOBJ("Tank", "OBJ//tank.obj");
 
 	// Skybox NIGHT
 	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
@@ -259,10 +262,31 @@ void SceneTank::Render()
 
 	// render tests
 
+	modelStack.PushMatrix();
+	modelStack.Translate(-3.f, 0.f, 0.f);
+	modelStack.Scale(1.f, 1.f, 1.f);
 
-	// Skybox NIGHT
-	//RenderSkybox();
+	meshList[GEO_TANK]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_TANK]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_TANK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_TANK]->material.kShininess = 5.0f;
 
+	RenderMesh(meshList[GEO_TANK], true);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(5.f, 3.f, 0.f);
+	modelStack.Rotate(90.0f, 0, 1, 0);
+	modelStack.Rotate(270.0f, 1, 0, 0);
+	modelStack.Scale(1.5f, 1.5f, 1.5f);
+
+	meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
+	meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_TARGET]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_TARGET], true);
+	modelStack.PopMatrix();
 
 
 }
