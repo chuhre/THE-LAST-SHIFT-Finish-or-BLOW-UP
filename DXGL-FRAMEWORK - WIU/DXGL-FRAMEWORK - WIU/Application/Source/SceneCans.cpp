@@ -112,9 +112,10 @@ void SceneCans::Init()
 	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
 	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f),1.f, 1.f, 1.f);   
 
-
 	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
 
+	meshList[GEO_TABLE] = MeshBuilder::GenerateOBJMTL("Table", "Models//table.obj", "Models//table.mtl");
+	meshList[GEO_TABLE]->textureID = LoadTGA("Images//table.tga");
 
 
 	// In Init() — change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
@@ -152,8 +153,8 @@ void SceneCans::Init()
 	enableLight = true;
 
 	//initialise door 
-	door[0] = { glm::vec3(0.0f, 2.0f, 15.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
-	door[1] = { glm::vec3(-8.0f, 2.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	door[0] = { glm::vec3(0.0f, 0.f, 15.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	door[1] = { glm::vec3(-9.75f, 0.f, 5.75f), 2.f, 3.5f, SceneManager::SCENE_LOBBY };
 
 	//GAME SETUP
 	SpawnCans();
@@ -308,10 +309,11 @@ void SceneCans::Render()
 
 	//environment
 	modelStack.PushMatrix();                     
-	modelStack.Translate(0.f, 0.f, 0.f);          
+	modelStack.Translate(0.f, -2.f, 0.f);          
 
 	modelStack.PushMatrix();                  
-	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Translate(-12.f, 0.f, 3.5f);
+	modelStack.Scale(2.25f, 1.f, 1.5f);
 	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
 	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
 	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -339,42 +341,73 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                     
 
-	//left wall
-	modelStack.PushMatrix();                    
-	modelStack.Translate(-10.f, 4.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
-	RenderMesh(meshList[GEO_WALL], true);      
-	modelStack.PopMatrix();                    
+	////left wall L
+	//modelStack.PushMatrix();                    
+	//modelStack.Translate(-10.f, 4.f, 4.f);
+	//modelStack.Scale(0.3f, 8.f, 10.f);
+	//RenderMesh(meshList[GEO_WALL], true);      
+	//modelStack.PopMatrix();   
+
+	//left wall R
+	modelStack.PushMatrix();
+	modelStack.Translate(-10.f, 4.f, -1.75f);
+	modelStack.Scale(0.3f, 8.f, 12.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
 
 	//right
 	modelStack.PushMatrix();                  
-	modelStack.Translate(10.f, 4.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
+	modelStack.Translate(10.f, 4.f, 3.5f);
+	modelStack.Scale(0.3f, 8.f, 22.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                    
 
 	//COUNTER
 	modelStack.PushMatrix();                   
 	modelStack.Translate(0.f, 0.5f, 1.5f);     
-
-	// Render counter 
+	modelStack.Scale(1.f, 2.5f, 2.5f);
 	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
 	meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
 	meshList[GEO_COUNTER]->material.kShininess = 8.f;
 	RenderMesh(meshList[GEO_COUNTER], true);
 
+	//render ball on counter
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(20.f, 10.f, 9.f);
+	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_BALL], true);
+	modelStack.PopMatrix();
+
+
+	modelStack.PopMatrix();
+
+
+
+	//MAIN TABLE 
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, -4.f);
+	modelStack.Scale(1.25f, 1.25f, 1.25f);
+	meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	meshList[GEO_TABLE]->material.kShininess = 8.f;
+	RenderMesh(meshList[GEO_TABLE], true);
 
 	//render cans
 	for (int i = 0; i < NUM_CANS; ++i)
 	{
 		if (!m_cans[i].active) continue;
 		modelStack.PushMatrix();
-		modelStack.Translate(m_cans[i].can.pos.x,
-			m_cans[i].can.pos.y,
-			m_cans[i].can.pos.z);
+		modelStack.Translate(m_cans[i].can.pos.x, m_cans[i].can.pos.y + 0.75f, m_cans[i].can.pos.z - 1.5f);
+
 		if (m_cans[i].knocked)
 			modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
+
 		modelStack.Scale(0.3f, 0.3f, 0.3f);
 		meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -382,17 +415,11 @@ void SceneCans::Render()
 		RenderMesh(meshList[GEO_CAN], true);
 		modelStack.PopMatrix();
 	}
-
-	//render ball
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 2.f, 0.f);
-	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
-	modelStack.Scale(15.f, 15.f, 15.f);
-	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
+
+
+
+	
 
 }
 
