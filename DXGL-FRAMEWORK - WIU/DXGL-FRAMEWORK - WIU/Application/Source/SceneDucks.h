@@ -17,16 +17,13 @@ public:
 		GEO_SPHERE,
 		GEO_CUBE,
 		GEO_PLANE,
+
+		GEO_OBJ,
+
+		GEO_FLOOR,
 		GEO_WALL,
-
-		OBJ_CASH_REGISTER,
-
-		OBJ_MAN,
-		OBJ_ENTITY,
-
-		OBJ_TACO,
-
-		GEO_SHUTTER,
+		GEO_CEILING,
+		GEO_COUNTER,       
 
 		GEO_LEFT,
 		GEO_RIGHT,
@@ -35,10 +32,6 @@ public:
 		GEO_FRONT,
 		GEO_BACK,
 
-		GEO_KIOSK_FLOOR,
-		GEO_KIOSK_WALL,
-		GEO_KIOSK_COUNTER,
-		GEO_KIOSK_ROOF,
 
 		GEO_DOOR_HOLE,
 		GEO_DOOR,
@@ -46,12 +39,16 @@ public:
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
 
-		GEO_SHUTTER_BUTTON,
-		GEO_SHUTTER_BUTTON_PRESS,
-
 		GEO_GUI,
 
 		GEO_TEXT,
+
+		GEO_POOL,
+		GEO_WATER,
+		GEO_DUCK,
+		GEO_DUCKLEYE,
+		GEO_DUCKREYE,
+		GEO_PEGHOOK,
 
 		NUM_GEOMETRY,
 	};
@@ -136,7 +133,10 @@ private:
 	bool enableLight;
 
 
-
+	//duck anim
+	float duckAngle = 0.f;   // current angle around the circle
+	float duckRadius = 12.f;  // radius of the circle
+	float duckSpeed = 0.3f;   // radians per second
 
 
 	// ANIMATIONS/INTERACTIONS
