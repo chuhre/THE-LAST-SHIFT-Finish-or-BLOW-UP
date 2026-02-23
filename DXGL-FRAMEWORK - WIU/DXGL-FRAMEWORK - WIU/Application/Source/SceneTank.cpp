@@ -93,14 +93,34 @@ void SceneTank::Init()
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
 	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
+	//meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(1.f, 1.f, 1.f), 10.f, 5.f, 0.5f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	// OBJ Models
 	meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//target.obj", "Models//target.mtl");
 	meshList[GEO_TARGET]->textureID = LoadTGA("Images//target_baseColor.tga");
 	meshList[GEO_TANK] = MeshBuilder::GenerateOBJMTL("Tank", "Models//tank.obj", "Models//tank.mtl");
+	meshList[GEO_LADDER] = MeshBuilder::GenerateOBJ("Ladder", "Models//ladder.obj");
+	meshList[GEO_LADDER]->textureID = LoadTGA("Images//Ladder_BaseColor.tga");
 	meshList[GEO_BOX] = MeshBuilder::GenerateOBJ("Box1", "Models//box.obj");
 	meshList[GEO_BOX]->textureID = LoadTGA("Images//box.tga");
+	meshList[GEO_BOX2] = MeshBuilder::GenerateOBJ("Box2", "Models//box.obj");
+	meshList[GEO_BOX2]->textureID = LoadTGA("Images//box.tga");
+	meshList[GEO_BOX3] = MeshBuilder::GenerateOBJ("Box3", "Models//box.obj");
+	meshList[GEO_BOX3]->textureID = LoadTGA("Images//box.tga");
+
+	// Environment
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism(
+		"Floor", glm::vec3(0.45f, 0.32f, 0.18f),   // dark wood brown
+		20.f, 0.2f, 15.f);
+
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism(
+		"Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),  // light tan canvas
+		20.f, 0.2f, 15.f);
+
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism(
+		"Wall", glm::vec3(0.9f, 0.85f, 0.6f),        // carnival cream
+		1.f, 1.f, 1.f);   // scaled per-wall in Render()
 
 
 	// Skybox NIGHT
@@ -264,9 +284,58 @@ void SceneTank::Render()
 
 	// render tests
 
+	modelStack.PushMatrix();                        // >>> BOOTH ROOT
+	modelStack.Translate(9.f, 0.f, 0.f);           // booth world origin
+
+	// ---- FLOOR ----
+	modelStack.PushMatrix();                    // >>> Floor
+	modelStack.Translate(0.f, 0.f, 0.f);
+	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
+	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_FLOOR]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_FLOOR], true);
+	modelStack.PopMatrix();                     // <<< Floor
+
+	// ---- CEILING ----
+	modelStack.PushMatrix();                    // >>> Ceiling
+	modelStack.Translate(0.f, 8.f, 0.f);
+	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_CEILING]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CEILING], true);
+	modelStack.PopMatrix();                     // <<< Ceiling
+
+	// ---- BACK WALL ----
+	modelStack.PushMatrix();                    // >>> Back Wall
+	modelStack.Translate(0.f, 4.f, -7.5f);
+	modelStack.Scale(20.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                     // <<< Back Wall
+
+	// ---- LEFT WALL ----
+	modelStack.PushMatrix();                    // >>> Left Wall
+	modelStack.Translate(-10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);       // reuses same mesh + material
+	modelStack.PopMatrix();                     // <<< Left Wall
+
+	// ---- RIGHT WALL ----
+	modelStack.PushMatrix();                    // >>> Right Wall
+	modelStack.Translate(10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                     // <<< Right Wall
+
+	// dunk tank
 	modelStack.PushMatrix();
-	modelStack.Translate(-3.f, 0.f, 0.f);
-	modelStack.Scale(1.f, 1.f, 1.f);
+	modelStack.Translate(-5.5f, 2.f, 0.f);
+	modelStack.Scale(2.f, 2.f, 2.f);
 
 	meshList[GEO_TANK]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
 	meshList[GEO_TANK]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -276,8 +345,9 @@ void SceneTank::Render()
 	RenderMesh(meshList[GEO_TANK], true);
 	modelStack.PopMatrix();
 
+	// target
 	modelStack.PushMatrix();
-	modelStack.Translate(5.f, 3.f, 0.f);
+	modelStack.Translate(2.5f, 3.f, 0.f);
 	modelStack.Rotate(90.0f, 0, 1, 0);
 	modelStack.Rotate(270.0f, 1, 0, 0);
 	modelStack.Scale(1.5f, 1.5f, 1.5f);
@@ -290,9 +360,24 @@ void SceneTank::Render()
 	RenderMesh(meshList[GEO_TARGET], true);
 	modelStack.PopMatrix();
 
+	// ladder
 	modelStack.PushMatrix();
-	modelStack.Translate(-3.f, 0.f, 0.f);
-	//modelStack.Scale(10.f, 1.f, 10.f);
+	modelStack.Translate(-2.f, 0.f, 0.f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.01f, 0.01f, 0.01f);
+
+	meshList[GEO_LADDER]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_LADDER]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_LADDER]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_LADDER]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_LADDER], true);
+	modelStack.PopMatrix();
+
+	// box
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.9f, 0.5f, -3.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
 
 	meshList[GEO_BOX]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
 	meshList[GEO_BOX]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -302,6 +387,35 @@ void SceneTank::Render()
 	RenderMesh(meshList[GEO_BOX], true);
 	modelStack.PopMatrix();
 
+	// box 2
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.9f, 1.56f, -3.f);
+	modelStack.Rotate(45.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
+
+	meshList[GEO_BOX2]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_BOX2]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX2]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX2]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_BOX2], true);
+	modelStack.PopMatrix();
+
+	// box 3
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.9f, 0.5f, -2.f);
+	modelStack.Rotate(-45.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
+
+	meshList[GEO_BOX3]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_BOX3]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX3]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX3]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_BOX3], true);
+	modelStack.PopMatrix();
+
+	modelStack.PopMatrix();
 }
 
 void SceneTank::RenderMesh(Mesh* mesh, bool enableLight)
