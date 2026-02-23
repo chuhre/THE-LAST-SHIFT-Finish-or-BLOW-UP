@@ -3,13 +3,15 @@
 
 #include "Scene.h"
 #include "Mesh.h"
-//#include "AltAzCamera.h"
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
 #include "SceneManager.h"
 #include <iostream>
 #include "Door.h"
+#include "PhysicsObject.h"
+
+
 
 class SceneCans : public Scene
 {
@@ -20,7 +22,6 @@ public:
 		GEO_SPHERE,
 		GEO_CUBE,
 		GEO_PLANE,
-
 		
 		GEO_LEFT,
 		GEO_RIGHT,
@@ -28,12 +29,17 @@ public:
 		GEO_BOTTOM,
 		GEO_FRONT,
 		GEO_BACK,
-
-		GEO_DOOR_HOLE,
+		
 		GEO_DOOR,
 
-		GEO_LIGHT_SWITCH,        // Switch plate
-		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
+		GEO_FLOOR,
+		GEO_WALL,
+		GEO_CEILING,
+		GEO_COUNTER,
+
+		GEO_BALL,
+		GEO_TABLE,
+		GEO_CAN,
 
 		GEO_GUI,
 
@@ -83,6 +89,28 @@ public:
 		GAME_LOST
 	};
 
+	struct Can 
+	{
+		PhysicsObject can;
+		float radius = 1.5f;
+		float height = 4.f;
+		bool active = true;
+		bool knocked = false;
+		Vector3 startPos;
+	};
+
+	struct Ball 
+	{
+		PhysicsObject ball;
+		float radius = 1.2f;
+		Vector3 pos;
+		bool launched = false;
+		bool inAir = false;
+	};
+
+	static const int NUM_CANS = 6;
+	static const int MAX_BALLS = 3;
+
 
 	SceneCans();
 	~SceneCans();
@@ -94,24 +122,22 @@ public:
 
 private:
 	void HandleKeyPress();
+	void HandleMouseInput();
+
 	void RenderMesh(Mesh* mesh, bool enableLight);
 	void RenderSkybox();
 	void RenderMeshOnScreen(Mesh* mesh, float x, float y,float sizex, float sizey);
 	void RenderText(Mesh* mesh, std::string text, glm::vec3	color);
 	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
-	void HandleMouseInput();
 
-	
+
+	//gl handlers
 	unsigned m_vertexArrayID;
 	Mesh* meshList[NUM_GEOMETRY];
-
 	unsigned m_programID;
 	unsigned m_parameters[U_TOTAL];
 
-	//AltAzCamera camera;
-	int projType = 1; // fix to 0 for orthographic, 1 for projection
 	FPCamera camera;
-
 
 	MatrixStack modelStack, viewStack, projectionStack;
 
@@ -120,40 +146,47 @@ private:
 	bool enableLight;
 
 
-	// ANIMATIONS/INTERACTIONS
-
 	// door
-	static const int NUM_DOORS = 1;
-	Door door;
+	static const int NUM_DOORS = 2;
+	Door door[NUM_DOORS];
 	bool showInteractPrompt;
-
-	// light 
-	glm::vec3 lightSwitchPosition;
-	bool isLightSwitchOn;
-	float leverRotation;
-
-	bool IsPlayerNearLightSwitch(float radius);
-
-
-	// shutter
-	glm::vec3 shutterButtonPosition;
-	bool isShutterOpen;
-	float shutterHeight;
-	float buttonPressDepth;
-
-	bool IsPlayerNearShutterButton(float radius);
-
-
-
+	
 	// Game state
 	GameState gameState;
+	int  m_throwsLeft = 3;
+	int  m_score = 0;
+
+	Can m_cans[NUM_CANS];
+	Ball m_ball;
+
+	bool ballCollected;
+
+	
+
 
 	// Collision detection
 	glm::vec3 playerSize;
 	bool CheckWallCollision(const glm::vec3& pos);
 
-	
-	float fps = 0;
+	//physics
+	void SpawnCans();
+	void ApplyGravity(PhysicsObject& obj, float dt);
+	void UpdateBall(float dt);
+	void UpdateCans(float dt);
+	void CheckBallCanCollisions();
+	void CheckCanCanCollisions();
+	void CheckFloorCollisions();
+	void LaunchBall();
+	void ResetGame();
+
+	//helpers
+	void DrawAimLine();
+	void RenderHUD();
+
+	//getters
+
+	//gravity
+	const float GRAVITY = -25.f;
 };
 
 #endif

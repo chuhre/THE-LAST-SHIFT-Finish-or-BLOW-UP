@@ -220,7 +220,7 @@ void SceneLobby::Update(double dt)
 
 	// E to open the nearest door
 	if (showInteractPrompt && activeDoorIndex >= 0 &&
-		KeyboardController::GetInstance()->IsKeyPressed('E'))
+		KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		doors[activeDoorIndex].Open();
 	}
@@ -323,7 +323,7 @@ void SceneLobby::Render()
 		modelStack.PopMatrix();
 
 		if (showInteractPrompt)
-			RenderTextOnScreen(meshList[GEO_TEXT], "Press E to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
+			RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
 	}
 
 }

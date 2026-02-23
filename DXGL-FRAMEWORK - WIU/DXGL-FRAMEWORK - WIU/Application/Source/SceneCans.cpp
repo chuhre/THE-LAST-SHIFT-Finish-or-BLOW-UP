@@ -101,27 +101,19 @@ void SceneCans::Init()
 	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
 
 	// OBJ Models
+	meshList[GEO_CAN] = MeshBuilder::GenerateOBJMTL("Can", "Models//can.obj", "Models//can.mtl");
+	meshList[GEO_CAN]->textureID = LoadTGA("Images//can.tga");
+
+	meshList[GEO_BALL] = MeshBuilder::GenerateOBJMTL("Ball", "Models//ball.obj", "Models//ball.mtl");
+	meshList[GEO_BALL]->textureID = LoadTGA("Images//ball.tga");
+
+	// Environment
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f),1.f, 1.f, 1.f);   
 
 
-	// Skybox NIGHT
-	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_LEFT]->textureID = LoadTGA("Images//nightsky_lf.tga");
-
-	meshList[GEO_RIGHT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_RIGHT]->textureID = LoadTGA("Images//nightsky_rt.tga");
-
-	meshList[GEO_TOP] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_TOP]->textureID = LoadTGA("Images//nightsky_up.tga");
-
-	meshList[GEO_BOTTOM] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BOTTOM]->textureID = LoadTGA("Images//nightsky_dn.tga");
-
-	meshList[GEO_FRONT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_FRONT]->textureID = LoadTGA("Images//nightsky_bk.tga");
-
-	meshList[GEO_BACK] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");*/
-
+	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
 
 
 
@@ -131,11 +123,6 @@ void SceneCans::Init()
 
 	// Player collision box size (width, height, depth)
 	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
-
-
-	// ANIMATIONS
-
-
 
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
@@ -164,7 +151,12 @@ void SceneCans::Init()
 
 	enableLight = true;
 
-	door = { glm::vec3(-8.0f, 0.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	//initialise door 
+	door[0] = { glm::vec3(0.0f, 2.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	door[1] = { glm::vec3(-8.0f, 2.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+
+	//GAME SETUP
+	SpawnCans();
 }
 
 
@@ -200,7 +192,7 @@ void SceneCans::Update(double dt)
 	// === ANIMATION/INTERACTIONS ====
 	//Door interaction
 	showInteractPrompt = false;
-	if (door.IsPlayerNear(camera.position, 2.5f))
+	if (door[0].IsPlayerNear(camera.position, 2.5f))
 	{
 		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_CANS))
 			showInteractPrompt = true;
@@ -208,22 +200,33 @@ void SceneCans::Update(double dt)
 		else 
 			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
 	}
-
-	// E to open the door
-	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('E'))
+	
+	// F to open the door
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
-		door.Open();
+		door[0].Open();
 	}
 
-	bool playerWalkedThrough = door.Update(dt, camera.position,	playerSize.x * 0.5f,playerSize.z * 0.5f);
+	bool playerWalkedThrough = door[0].Update(dt, camera.position,	playerSize.x * 0.5f,playerSize.z * 0.5f);
 	if (playerWalkedThrough)
 	{
-		SceneManager::GetInstance()->SwitchScene(door.leadsTo);
-		door.Close();
+		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
+		door[0].Close();
 		showInteractPrompt = false;
 	}
 
+	//side door
+	if (door[1].IsPlayerNear(camera.position, 2.5f))
+	{
+		door[1].Open();
+	}
 
+	if (door[1].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
+	{
+		door[1].Close();
+	}
+	
+	
 	//check if player wins
 
 	//if player wins
@@ -277,22 +280,128 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
 
-	// Skybox NIGHT
-	//RenderSkybox();
-
-	//render door
+	//render main door
 	modelStack.PushMatrix();
-	modelStack.Translate(door.position.x, door.position.y, door.position.z);
-	modelStack.Rotate(door.rotation, 0, 1, 0);   // use Door's own rotation
-	modelStack.Scale(door.width, door.height, 0.2f);
+	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
+	modelStack.Rotate(door[0].rotation, 0, 1, 0);   // use Door's own rotation
+	modelStack.Scale(door[0].width, door[0].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 	RenderMesh(meshList[GEO_DOOR], true);
 	modelStack.PopMatrix();
 	
-	if(showInteractPrompt)
-		RenderTextOnScreen(meshList[GEO_TEXT], "Press E to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50 );
+	//side door
+	modelStack.PushMatrix();
+	modelStack.Translate(door[1].position.x, door[1].position.y, door[1].position.z);
+	modelStack.Rotate(door[1].rotation + 90.f, 0, 1, 0);   // use Door's own rotation
+	modelStack.Scale(door[1].width, door[1].height, 0.2f);
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_DOOR], true);
+	modelStack.PopMatrix();
+
+	if (showInteractPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
+
+
+	//environment
+	modelStack.PushMatrix();                     
+	modelStack.Translate(0.f, 0.f, 0.f);          
+
+	modelStack.PushMatrix();                  
+	modelStack.Translate(0.f, 0.f, 0.f);
+	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
+	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_FLOOR]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_FLOOR], true);
+	modelStack.PopMatrix();                     
+
+	modelStack.PushMatrix();                   
+	modelStack.Translate(0.f, 8.f, 0.f);
+	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_CEILING]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CEILING], true);
+	modelStack.PopMatrix();                     
+
+	modelStack.PushMatrix();                    
+	modelStack.Translate(0.f, 4.f, -7.5f);
+	modelStack.Scale(20.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                     
+
+	modelStack.PushMatrix();                    
+	modelStack.Translate(-10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);      
+	modelStack.PopMatrix();                    
+
+	modelStack.PushMatrix();                  
+	modelStack.Translate(10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                    
+
+	//COUNTER
+	modelStack.PushMatrix();                   
+	modelStack.Translate(0.f, 0.5f, 1.5f);     
+
+	// Render counter 
+	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	meshList[GEO_COUNTER]->material.kShininess = 8.f;
+	RenderMesh(meshList[GEO_COUNTER], true);
+
+
+	//render can
+	/*modelStack.PushMatrix();
+	modelStack.Translate(0.f, 2.f, 0.f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
+	meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_CAN], true);
+	modelStack.PopMatrix();*/
+
+
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		if (!m_cans[i].active) continue;
+		modelStack.PushMatrix();
+		modelStack.Translate(m_cans[i].can.pos.x,
+			m_cans[i].can.pos.y,
+			m_cans[i].can.pos.z);
+		if (m_cans[i].knocked)
+			modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
+		modelStack.Scale(0.3f, 0.3f, 0.3f);
+		meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		RenderMesh(meshList[GEO_CAN], true);
+		modelStack.PopMatrix();
+	}
+
+	//render ball
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 2.f, 0.f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(15.f, 15.f, 15.f);
+	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_BALL], true);
+	modelStack.PopMatrix();
+
 }
 
 void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
@@ -354,10 +463,6 @@ void SceneCans::RenderSkybox() {
 	// Skybox should be rendered without light
 	RenderMesh(meshList[GEO_FRONT], false);
 	modelStack.PopMatrix();
-
-	// Do the rest of the quads with
-	// appropriate positions and rotations
-	// so that the camera is inside the skybox
 
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, 0.f, -50.f);
@@ -626,4 +731,74 @@ void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
 	modelStack.PopMatrix();
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
+}
+
+void SceneCans::SpawnCans()
+{
+	const float counterTopY = 1.1f;
+	const float canH = 0.9f;   // visual height of one can (scaled)
+	const float canSpacing = 0.7f;
+
+	// Bottom row — 3 cans
+	m_cans[0].can.pos = Vector3(-canSpacing, counterTopY, 1.5f);
+	m_cans[1].can.pos = Vector3(0.f, counterTopY, 1.5f);
+	m_cans[2].can.pos = Vector3(canSpacing, counterTopY, 1.5f);
+
+	// Middle row — 2 cans (offset half a spacing, raised one can height)
+	m_cans[3].can.pos = Vector3(-canSpacing * 0.5f, counterTopY + canH, 1.5f);
+	m_cans[4].can.pos = Vector3(canSpacing * 0.5f, counterTopY + canH, 1.5f);
+
+	// Top row — 1 can
+	m_cans[5].can.pos = Vector3(0.f, counterTopY + canH * 2.f, 1.5f);
+
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		m_cans[i].active = true;
+		m_cans[i].knocked = false;
+		m_cans[i].startPos = m_cans[i].can.pos;   // save for ResetGame()
+		m_cans[i].can.vel = Vector3(0.f);
+	}
+}
+
+void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
+{
+	obj.vel.y += GRAVITY * dt;
+	obj.pos += obj.vel * dt;
+}
+
+void SceneCans::UpdateBall(float dt)
+{
+}
+
+void SceneCans::UpdateCans(float dt)
+{
+}
+
+void SceneCans::CheckBallCanCollisions()
+{
+}
+
+void SceneCans::CheckCanCanCollisions()
+{
+}
+
+void SceneCans::CheckFloorCollisions()
+{
+}
+
+void SceneCans::LaunchBall()
+{
+}
+
+void SceneCans::ResetGame()
+{
+
+}
+
+void SceneCans::DrawAimLine()
+{
+}
+
+void SceneCans::RenderHUD()
+{
 }
