@@ -100,18 +100,17 @@ void SceneShooting::Init()
 	// props
 	//meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(1.f, 1.f, 1.f), 10.f, 1.f, 2.f);
 	//meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateRectangularPrism("Target Rail", glm::vec3(1.f, 1.f, 1.f), 10.f, 0.5f, 0.5f);
-	
-	/*meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//Target.obj", "Models//Target.mtl");
-	meshList[GEO_TARGET]->textureID = LoadTGA("Images//TargetMat_baseColor.tga");*/
 
 	meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//target.obj", "Models//target.mtl");
 	meshList[GEO_TARGET]->textureID = LoadTGA("Images//target_baseColor.tga");
 	
 	//meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.f, 0.f, 0.f), 0.5f, 16, 16);
+	meshList[GEO_BOMB] = MeshBuilder::GenerateSphere(
+		"Bomb", glm::vec3(0.05f, 0.05f, 0.05f), 0.35f, 16, 16);
+
 	
-	//meshList[GEO_GUN] = MeshBuilder::GenerateOBJ("Gun", "Models//GunToy.obj");
-	meshList[GEO_GUN] = MeshBuilder::GenerateOBJMTL("Gun", "Models//GunToy.obj", "Models//GunToy.mtl");
-	meshList[GEO_GUN]->textureID = LoadTGA("Images//Toy_Gun_body1_BaseColor.tga");
+	meshList[GEO_GUN] = MeshBuilder::GenerateOBJMTL("Gun", "Models//nerf_gun.obj", "Models//nerf_gun.mtl");
+	meshList[GEO_GUN]->textureID = LoadTGA("Images//blinn1_baseColor.tga");
 	
 
 
@@ -120,32 +119,27 @@ void SceneShooting::Init()
 
 
 	// Environment
-	//meshList[GEO_FLOOR] = MeshBuilder::GenerateQuad("Floor", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	//meshList[GEO_FLOOR]->textureID = LoadTGA("Images//floor.tga");
+meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism(
+    "Floor", glm::vec3(0.45f, 0.32f, 0.18f),   // dark wood brown
+    20.f, 0.2f, 15.f);
 
-	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.9f, 0.9f), 1.f, 1.f, 1.f);
-	//meshList[GEO_WALL]->textureID = LoadTGA("Images//wall.tga");
+meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism(
+    "Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),  // light tan canvas
+    20.f, 0.2f, 15.f);
 
+meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism(
+    "Wall", glm::vec3(0.9f, 0.85f, 0.6f),        // carnival cream
+    1.f, 1.f, 1.f);   // scaled per-wall in Render()
 
+// Counter (barrier between player and targets)
+meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism(
+    "Counter", glm::vec3(0.55f, 0.35f, 0.15f),   // dark wood
+    20.f, 1.0f, 0.4f);
 
-	// Skybox NIGHT
-	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_LEFT]->textureID = LoadTGA("Images//nightsky_lf.tga");
-
-	meshList[GEO_RIGHT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_RIGHT]->textureID = LoadTGA("Images//nightsky_rt.tga");
-
-	meshList[GEO_TOP] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_TOP]->textureID = LoadTGA("Images//nightsky_up.tga");
-
-	meshList[GEO_BOTTOM] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BOTTOM]->textureID = LoadTGA("Images//nightsky_dn.tga");
-
-	meshList[GEO_FRONT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_FRONT]->textureID = LoadTGA("Images//nightsky_bk.tga");
-
-	meshList[GEO_BACK] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");*/
+// Target rail (thin bar along back wall)
+meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
+    "TargetRail", glm::vec3(0.6f, 0.6f, 0.65f),  // gunmetal grey
+    12, 0.12f, 18.f);
 
 
 
@@ -154,11 +148,35 @@ void SceneShooting::Init()
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
-	// Player collision box size (width, height, depth)
-	//playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
 
+	
+	
 	// ANIMATIONS
+	
+	// ---------- Game state initialisation ----------
+	gameState = STATE_FIND_GUN;
+	bulletsLeft = MAX_BULLETS;   // 8
+	targetsHit = 0;
+	bombTimer = 120.0f;        // 2 minutes
+	gunPickedUp = false;
+	muzzleFlashTimer = 0.f;
+	fps = 0.f;
+
+	// Gun lying on the floor – to the right side, easy to spot
+	gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
+
+	// ---------- Target setup ----------
+	// 5 targets on the rail, staggered starting positions, alternating directions
+	//   Rail runs roughly X: -8 to +8, at Z = -5, Y = 3.5 (above counter)
+	float railY = 3.5f;
+	float railZ = -5.0f;
+
+	targets[0] = { glm::vec3(-6.f, railY, railZ), 2.5f, +1.f, -8.f, 8.f, true };
+	targets[1] = { glm::vec3(-2.f, railY, railZ), 3.5f, -1.f, -8.f, 8.f, true };
+	targets[2] = { glm::vec3(2.f, railY, railZ), 2.0f, +1.f, -8.f, 8.f, true };
+	targets[3] = { glm::vec3(5.f, railY, railZ), 4.0f, -1.f, -8.f, 8.f, true };
+	targets[4] = { glm::vec3(-4.f, railY, railZ), 3.0f, +1.f, -8.f, 8.f, true };
 
 
 
@@ -234,7 +252,47 @@ void SceneShooting::Update(double dt)
 
 
 	// === ANIMATION/INTERACTIONS ====
+	// --- Target movement (only while playing) ---
+	if (gameState == STATE_PLAYING)
+	{
+		for (int i = 0; i < NUM_TARGETS; ++i)
+		{
+			if (!targets[i].isAlive) continue;
 
+			targets[i].position.x += targets[i].speed * targets[i].direction * static_cast<float>(dt);
+
+			// Bounce at patrol bounds
+			if (targets[i].position.x >= targets[i].maxX)
+			{
+				targets[i].position.x = targets[i].maxX;
+				targets[i].direction = -1.f;
+			}
+			else if (targets[i].position.x <= targets[i].minX)
+			{
+				targets[i].position.x = targets[i].minX;
+				targets[i].direction = +1.f;
+			}
+		}
+
+		// --- Bomb timer countdown ---
+		bombTimer -= static_cast<float>(dt);
+		if (bombTimer <= 0.f)
+		{
+			bombTimer = 0.f;
+			gameState = STATE_LOST;
+		}
+
+		// --- Check win ---
+		if (targetsHit >= NUM_TARGETS)
+			gameState = STATE_WON;
+	}
+
+	// --- Muzzle flash decay ---
+	if (muzzleFlashTimer > 0.f)
+		muzzleFlashTimer -= static_cast<float>(dt);
+
+	// --- FPS counter ---
+	fps = static_cast<float>(1.0 / dt);
 
 
 }
@@ -336,8 +394,8 @@ void SceneShooting::Render()
 	
 	// gun obj
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.f, 0.f);
-	modelStack.Scale(0.2f, 0.2f, 0.2f);
+	modelStack.Translate(-15.f, 0.f, 0.f);
+	modelStack.Scale(0.01f, 0.01f, 0.01f);
 
 	meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
 	meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
@@ -367,8 +425,162 @@ void SceneShooting::Render()
 
 
 
-	// Skybox NIGHT
-	//RenderSkybox();
+	// BOOTH ROOT – all booth geometry lives inside this push/pop.
+// Translate here if you ever want to move the whole booth at once.
+// ------------------------------------------------------------------
+	modelStack.PushMatrix();                        // >>> BOOTH ROOT
+	modelStack.Translate(9.f, 0.f, 0.f);           // booth world origin
+
+	// ---- FLOOR ----
+	modelStack.PushMatrix();                    // >>> Floor
+	modelStack.Translate(0.f, 0.f, 0.f);
+	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
+	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_FLOOR]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_FLOOR], true);
+	modelStack.PopMatrix();                     // <<< Floor
+
+	// ---- CEILING ----
+	modelStack.PushMatrix();                    // >>> Ceiling
+	modelStack.Translate(0.f, 8.f, 0.f);
+	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_CEILING]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CEILING], true);
+	modelStack.PopMatrix();                     // <<< Ceiling
+
+	// ---- BACK WALL ----
+	modelStack.PushMatrix();                    // >>> Back Wall
+	modelStack.Translate(0.f, 4.f, -7.5f);
+	modelStack.Scale(20.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                     // <<< Back Wall
+
+	// ---- LEFT WALL ----
+	modelStack.PushMatrix();                    // >>> Left Wall
+	modelStack.Translate(-10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);       // reuses same mesh + material
+	modelStack.PopMatrix();                     // <<< Left Wall
+
+	// ---- RIGHT WALL ----
+	modelStack.PushMatrix();                    // >>> Right Wall
+	modelStack.Translate(10.f, 4.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();                     // <<< Right Wall
+
+
+	// ------------------------------------------------------------------
+	// COUNTER (PARENT)
+	//   World position: centred X, Y=0.5, Z=1.5
+	//   Children inherit this transform before applying their own offset.
+	// ------------------------------------------------------------------
+	modelStack.PushMatrix();                    // >>> COUNTER PARENT
+	modelStack.Translate(0.f, 0.5f, 1.5f);     // counter world position
+
+	// Render counter itself
+	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	meshList[GEO_COUNTER]->material.kShininess = 8.f;
+	RenderMesh(meshList[GEO_COUNTER], true);
+
+	// ---- BOMB (CHILD of Counter) ----
+	// Offset: +0.5 in Y (sits on top of counter surface),
+	//         -7 in X (left end of counter)
+	// No extra Z needed – inherits counter's Z=1.5
+	modelStack.PushMatrix();                // >>> BOMB CHILD
+	modelStack.Translate(-7.f, 0.85f, 0.f);
+	meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_BOMB]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
+	meshList[GEO_BOMB]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_BOMB], true);
+	modelStack.PopMatrix();                 // <<< BOMB CHILD
+
+	modelStack.PopMatrix();                     // <<< COUNTER PARENT
+
+
+	// ------------------------------------------------------------------
+	// TARGET RAIL (PARENT)
+	//   World position: centred X, Y=3.5, Z=-5  (above counter, back wall)
+	//   The cylinder's long axis is vertical by default so we rotate 90°
+	//   around Z to lay it horizontally along X.
+	//   All targets are children – their X offset is relative to the
+	//   rail's centre, so moving the rail moves all targets with it.
+	// ------------------------------------------------------------------
+	modelStack.PushMatrix();                    // >>> RAIL PARENT
+	modelStack.Translate(0.f, 3.5f, -5.0f);    // rail world position
+	modelStack.Rotate(90.f, 0.f, 0.f, 1.f);    // lay cylinder along X axis
+
+	// Render rail itself
+	meshList[GEO_TARGET_RAIL]->material.kAmbient = glm::vec3(0.2f, 0.2f, 0.22f);
+	meshList[GEO_TARGET_RAIL]->material.kDiffuse = glm::vec3(0.55f, 0.55f, 0.6f);
+	meshList[GEO_TARGET_RAIL]->material.kSpecular = glm::vec3(0.8f, 0.8f, 0.8f);
+	meshList[GEO_TARGET_RAIL]->material.kShininess = 32.f;
+	RenderMesh(meshList[GEO_TARGET_RAIL], true);
+
+	// ---- TARGETS (CHILDREN of Rail) ----
+	// Because the rail was rotated 90° around Z, the local axes
+	// are swapped. We undo that rotation for each child so their
+	// own translate/scale/rotate behave normally.
+	for (int i = 0; i < NUM_TARGETS; ++i)
+	{
+		if (!targets[i].isAlive) continue;
+
+		modelStack.PushMatrix();            // >>> TARGET[i] CHILD
+
+		// Undo parent's 90° Z rotation so child X/Y/Z feel normal
+		modelStack.Rotate(-90.f, 0.f, 0.f, 1.f);
+
+		// targets[i].position is in world space;
+		// subtract the rail's world origin to get local offset
+		float localX = targets[i].position.x - 0.f;   // rail centred at X=0
+		float localY = targets[i].position.y - 3.5f;   // rail at Y=3.5
+		// Z is the same as rail so local Z offset = 0
+		modelStack.Translate(localX, localY, 0.f);
+
+		modelStack.Rotate(180.f, 0.f, 1.f, 0.f);       // face player
+		modelStack.Scale(1.5f, 1.5f, 1.5f);
+
+		meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.2f, 0.1f, 0.1f);
+		meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.9f, 0.3f, 0.3f);
+		meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
+		meshList[GEO_TARGET]->material.kShininess = 10.f;
+		RenderMesh(meshList[GEO_TARGET], true);
+
+		modelStack.PopMatrix();             // <<< TARGET[i] CHILD
+	}
+
+	modelStack.PopMatrix();                     // <<< RAIL PARENT
+
+	modelStack.PopMatrix();                         // <<< BOOTH ROOT
+
+
+	// ------------------------------------------------------------------
+	// GUN – independent (not part of booth hierarchy)
+	// Only rendered while it hasn't been picked up yet.
+	// ------------------------------------------------------------------
+	if (!gunPickedUp)
+	{
+		modelStack.PushMatrix();                    // >>> GUN
+		modelStack.Translate(gunWorldPos.x, gunWorldPos.y, gunWorldPos.z);
+		modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+		modelStack.Scale(0.02f, 0.02f, 0.02f);
+		meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+		meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.6f, 0.55f, 0.5f);
+		meshList[GEO_GUN]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_GUN]->material.kShininess = 20.f;
+		RenderMesh(meshList[GEO_GUN], true);
+		modelStack.PopMatrix();                     // <<< GUN
+	}
 
 
 
