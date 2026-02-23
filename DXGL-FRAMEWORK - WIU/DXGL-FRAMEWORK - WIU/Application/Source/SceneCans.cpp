@@ -152,7 +152,7 @@ void SceneCans::Init()
 	enableLight = true;
 
 	//initialise door 
-	door[0] = { glm::vec3(0.0f, 2.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	door[0] = { glm::vec3(0.0f, 2.0f, 15.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
 	door[1] = { glm::vec3(-8.0f, 2.0f, 0.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
 
 	//GAME SETUP
@@ -328,6 +328,7 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_CEILING], true);
 	modelStack.PopMatrix();                     
 
+	//back wall
 	modelStack.PushMatrix();                    
 	modelStack.Translate(0.f, 4.f, -7.5f);
 	modelStack.Scale(20.f, 8.f, 0.3f);
@@ -338,12 +339,14 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                     
 
+	//left wall
 	modelStack.PushMatrix();                    
 	modelStack.Translate(-10.f, 4.f, 0.f);
 	modelStack.Scale(0.3f, 8.f, 15.f);
 	RenderMesh(meshList[GEO_WALL], true);      
 	modelStack.PopMatrix();                    
 
+	//right
 	modelStack.PushMatrix();                  
 	modelStack.Translate(10.f, 4.f, 0.f);
 	modelStack.Scale(0.3f, 8.f, 15.f);
@@ -362,18 +365,7 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_COUNTER], true);
 
 
-	//render can
-	/*modelStack.PushMatrix();
-	modelStack.Translate(0.f, 2.f, 0.f);
-	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
-	modelStack.Scale(0.3f, 0.3f, 0.3f);
-	meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-	meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	RenderMesh(meshList[GEO_CAN], true);
-	modelStack.PopMatrix();*/
-
-
+	//render cans
 	for (int i = 0; i < NUM_CANS; ++i)
 	{
 		if (!m_cans[i].active) continue;
