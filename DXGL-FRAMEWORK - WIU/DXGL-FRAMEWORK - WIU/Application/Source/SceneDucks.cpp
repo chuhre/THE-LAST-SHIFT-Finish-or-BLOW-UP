@@ -95,28 +95,24 @@ void SceneDucks::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
-	// OBJ Models
-	meshList[GEO_WALL] = MeshBuilder::GenerateOBJMTL("Wall", "OBJ//Cube.obj", "OBJ//Cube.mtl");
+	// DUCKKKK
+	meshList[GEO_POOL] = MeshBuilder::GenerateOBJ("Pool", "Models//pool.obj");
+	meshList[GEO_POOL]->textureID = LoadTGA("Images//pool1.tga");
+	meshList[GEO_WATER] = MeshBuilder::GenerateSphere("Water", glm::vec3(0.1f, 0.4f, 0.8f), 1.f, 32);
+	meshList[GEO_WATER]->textureID = LoadTGA("Images//water.tga");
+	meshList[GEO_DUCK] = MeshBuilder::GenerateOBJ("Duck", "Models//duck1.obj");
+	meshList[GEO_DUCKLEYE] = MeshBuilder::GenerateSphere("LeftDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
+	meshList[GEO_DUCKREYE] = MeshBuilder::GenerateSphere("RighttDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
+	meshList[GEO_PEGHOOK] = MeshBuilder::GenerateOBJ("Peghook", "Models//peghook.obj");
 
 
-	// Skybox NIGHT
-	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_LEFT]->textureID = LoadTGA("Images//nightsky_lf.tga");
 
-	meshList[GEO_RIGHT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_RIGHT]->textureID = LoadTGA("Images//nightsky_rt.tga");
-
-	meshList[GEO_TOP] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_TOP]->textureID = LoadTGA("Images//nightsky_up.tga");
-
-	meshList[GEO_BOTTOM] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BOTTOM]->textureID = LoadTGA("Images//nightsky_dn.tga");
-
-	meshList[GEO_FRONT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_FRONT]->textureID = LoadTGA("Images//nightsky_bk.tga");
-
-	meshList[GEO_BACK] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");*/
+	// Environment (copy from SceneShooting)
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f),20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),20.f, 0.2f, 15.f);
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f),1.f, 1.f, 1.f);
+	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f),20.f, 1.0f, 0.4f);
+	
 
 
 
@@ -193,18 +189,13 @@ void SceneDucks::Update(double dt)
 	camera.Update(dt);
 
 
-
-
-
-
-
-
-
-
-
-
-
 	// === ANIMATION/INTERACTIONS ====
+
+	duckAngle += duckSpeed * (float)dt;
+	if (duckAngle > glm::two_pi<float>())
+		duckAngle -= glm::two_pi<float>();
+
+
 
 
 
@@ -257,6 +248,137 @@ void SceneDucks::Render()
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
 
+	// ---- BOOTH ----
+	modelStack.PushMatrix();                        // >>> BOOTH ROOT
+	modelStack.Translate(0.f, 0.f, 0.f);           // adjust if needed
+
+	// FLOOR
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, -2.0f, 0.f);
+	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
+	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_FLOOR]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_FLOOR], true);
+	modelStack.PopMatrix();
+
+	// CEILING
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 6.f, 0.f);
+	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_CEILING]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CEILING], true);
+	modelStack.PopMatrix();
+
+	// BACK WALL
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 2.f, -7.5f);
+	modelStack.Scale(20.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// LEFT WALL
+	modelStack.PushMatrix();
+	modelStack.Translate(-10.f, 2.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// RIGHT WALL
+	modelStack.PushMatrix();
+	modelStack.Translate(10.f, 2.f, 0.f);
+	modelStack.Scale(0.3f, 8.f, 15.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//// COUNTER
+	//modelStack.PushMatrix();
+	//modelStack.Translate(0.f, 0.5f, 1.5f);
+	//meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	//meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	//meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	//meshList[GEO_COUNTER]->material.kShininess = 8.f;
+	//RenderMesh(meshList[GEO_COUNTER], true);
+	//modelStack.PopMatrix();
+
+	// POOL
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, -1.5f, 0.f);
+	modelStack.Scale(0.2f, 0.2f, 0.2f);         
+	RenderMesh(meshList[GEO_POOL], true);
+	meshList[GEO_POOL]->material.kAmbient = glm::vec3(0.1f, 0.2f, 0.3f);
+	meshList[GEO_POOL]->material.kDiffuse = glm::vec3(0.2f, 0.5f, 0.8f);
+	meshList[GEO_POOL]->material.kSpecular = glm::vec3(0.3f, 0.5f, 0.7f);
+	meshList[GEO_POOL]->material.kShininess = 16.f;
+
+
+	// In Render()
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 1.0f, 0.f);   // just above floor
+	modelStack.Scale(18.f, 1.f, 18.f);          // stretch to pool size
+	//modelStack.Rotate(0.f, 0.f, 90.f, 0.f);         
+	meshList[GEO_WATER]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
+	meshList[GEO_WATER]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
+	meshList[GEO_WATER]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);  // high specularity = shiny
+	meshList[GEO_WATER]->material.kShininess = 64.f;                          // glossy look
+	RenderMesh(meshList[GEO_WATER], true);
+	modelStack.PopMatrix();
+
+	// DUCK
+	modelStack.PushMatrix();
+
+	// Circle position using sin/cos
+	float duckX = duckRadius * glm::cos(duckAngle);
+	float duckZ = duckRadius * glm::sin(duckAngle);
+	modelStack.Translate(duckX, 1.5f, duckZ);
+
+	// Face the direction of movement (tangent to circle)
+	float facingAngle = glm::degrees(duckAngle) + 90.f;
+	modelStack.Rotate(facingAngle, 0.f, 1.f, 0.f);
+
+	modelStack.Scale(0.07f, 0.07f, 0.07f);
+	meshList[GEO_DUCK]->material.kAmbient = glm::vec3(1.0f, 0.8f, 0.0f);
+	meshList[GEO_DUCK]->material.kDiffuse = glm::vec3(1.0f, 0.85f, 0.1f);
+	meshList[GEO_DUCK]->material.kSpecular = glm::vec3(0.4f, 0.35f, 0.1f);
+	meshList[GEO_DUCK]->material.kShininess = 8.f;
+	RenderMesh(meshList[GEO_DUCK], true);
+
+	modelStack.PushMatrix();
+	modelStack.Translate(10.f, 28.f, 10.f);
+	modelStack.Scale(2.0f, 2.0f, 2.0f);
+	RenderMesh(meshList[GEO_DUCKLEYE], true);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(10.f, 28.f, -10.f);
+	modelStack.Scale(2.0f, 2.0f, 2.0f);
+	RenderMesh(meshList[GEO_DUCKREYE], true);
+	modelStack.PopMatrix();
+
+	modelStack.PopMatrix(); //DUCK ROOT
+
+	modelStack.PopMatrix(); // POOL ROOT
+
+	modelStack.PopMatrix();                         // <<< BOOTH ROOT
+
+
+
+	modelStack.PushMatrix();
+	modelStack.Translate(4.f, 2.0f, 0.f);   
+	modelStack.Scale(5.f, 5.f, 3.f);          
+	meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
+	meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
+	meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
+	RenderMesh(meshList[GEO_PEGHOOK], true);
+	modelStack.PopMatrix();
+	
 
 	// render tests
 
