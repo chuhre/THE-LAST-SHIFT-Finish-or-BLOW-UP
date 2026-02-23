@@ -164,7 +164,7 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	fps = 0.f;
 
 	// Gun lying on the floor – to the right side, easy to spot
-	gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
+	gunWorldPos = glm::vec3(7.f, 0.6f, 7.f);
 
 	// ---------- Target setup ----------
 	// 5 targets on the rail, staggered starting positions, alternating directions
