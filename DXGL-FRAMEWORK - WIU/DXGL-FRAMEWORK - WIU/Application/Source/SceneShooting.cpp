@@ -18,6 +18,7 @@
 #include "KeyboardController.h"
 #include "MouseController.h"
 #include "LoadTGA.h"
+#include "SceneManager.h"
 
 SceneShooting::SceneShooting()
 {
@@ -93,7 +94,13 @@ void SceneShooting::Init()
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
 	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
-	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
+
+
+	// UI
+	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
+	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
+	meshList[GEO_GUI] = MeshBuilder::GenerateQuad("GUI", glm::vec3(1, 1, 1), 1.f);
+
 
 	// OBJ Models
 
@@ -172,11 +179,11 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	float railY = 3.5f;
 	float railZ = -5.0f;
 
-	targets[0] = { glm::vec3(-6.f, railY, railZ), 2.5f, +1.f, -8.f, 8.f, true };
-	targets[1] = { glm::vec3(-2.f, railY, railZ), 3.5f, -1.f, -8.f, 8.f, true };
-	targets[2] = { glm::vec3(2.f, railY, railZ), 2.0f, +1.f, -8.f, 8.f, true };
-	targets[3] = { glm::vec3(5.f, railY, railZ), 4.0f, -1.f, -8.f, 8.f, true };
-	targets[4] = { glm::vec3(-4.f, railY, railZ), 3.0f, +1.f, -8.f, 8.f, true };
+	targets[0] = { glm::vec3(-6.f, 0.f, 0.f), 2.5f, +1.f, -8.f, 8.f, true };
+	targets[1] = { glm::vec3(-3.f, 0.f, 0.f), 3.5f, -1.f, -8.f, 8.f, true };
+	targets[2] = { glm::vec3(0.f, 0.f, 0.f), 2.0f, +1.f, -8.f, 8.f, true };
+	targets[3] = { glm::vec3(3.f, 0.f, 0.f), 4.0f, -1.f, -8.f, 8.f, true };
+	targets[4] = { glm::vec3(6.f, 0.f, 0.f), 3.0f, +1.f, -8.f, 8.f, true };
 
 
 
@@ -257,25 +264,42 @@ void SceneShooting::Update(double dt)
 	{
 		for (int i = 0; i < NUM_TARGETS; ++i)
 		{
-			if (!targets[i].isAlive) continue;
+			//if (!targets[i].isAlive) continue;
 
-			targets[i].position.x += targets[i].speed * targets[i].direction * static_cast<float>(dt);
+			//targets[i].position.x += targets[i].speed * targets[i].direction * static_cast<float>(dt);
 
-			// Bounce at patrol bounds
-			if (targets[i].position.x >= targets[i].maxX)
+			//// Bounce at patrol bounds
+			//if (targets[i].position.x >= targets[i].maxX)
+			//{
+			//	targets[i].position.x = targets[i].maxX;
+			//	targets[i].direction = -1.f;
+			//}
+			//else if (targets[i].position.x <= targets[i].minX)
+			//{
+			//	targets[i].position.x = targets[i].minX;
+			//	targets[i].direction = +1.f;
+			//}
+
+			for (int i = 0; i < NUM_TARGETS; ++i)
 			{
-				targets[i].position.x = targets[i].maxX;
-				targets[i].direction = -1.f;
+				if (!targets[i].isAlive) continue;
+
+				targets[i].position.x += targets[i].speed * targets[i].direction * (float)dt;
+
+				if (targets[i].position.x >= targets[i].maxX) {
+					targets[i].position.x = targets[i].maxX;
+					targets[i].direction = -1.f;
+				}
+				else if (targets[i].position.x <= targets[i].minX) {
+					targets[i].position.x = targets[i].minX;
+					targets[i].direction = +1.f;
+				}
 			}
-			else if (targets[i].position.x <= targets[i].minX)
-			{
-				targets[i].position.x = targets[i].minX;
-				targets[i].direction = +1.f;
-			}
+
 		}
 
 		// --- Bomb timer countdown ---
-		bombTimer -= static_cast<float>(dt);
+		bombTimer -= (float)dt;
 		if (bombTimer <= 0.f)
 		{
 			bombTimer = 0.f;
@@ -289,10 +313,10 @@ void SceneShooting::Update(double dt)
 
 	// --- Muzzle flash decay ---
 	if (muzzleFlashTimer > 0.f)
-		muzzleFlashTimer -= static_cast<float>(dt);
+		muzzleFlashTimer -= (float)dt;
 
 	// --- FPS counter ---
-	fps = static_cast<float>(1.0 / dt);
+	fps = (float)(1.0 / dt);
 
 
 }
@@ -393,7 +417,7 @@ void SceneShooting::Render()
 	
 	
 	// gun obj
-	modelStack.PushMatrix();
+	/*modelStack.PushMatrix();
 	modelStack.Translate(-15.f, 0.f, 0.f);
 	modelStack.Scale(0.01f, 0.01f, 0.01f);
 
@@ -403,11 +427,11 @@ void SceneShooting::Render()
 	meshList[GEO_GUN]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_GUN], true);
-	modelStack.PopMatrix(); 
+	modelStack.PopMatrix(); */
 
 
 	// target obj
-	modelStack.PushMatrix();
+	/*modelStack.PushMatrix();
 	modelStack.Translate(5.f, 0.f, 0.f);
 	modelStack.Scale(1.5f, 1.5f, 1.5f);
 	modelStack.Rotate(90.0f, 0, 1, 0);
@@ -418,7 +442,7 @@ void SceneShooting::Render()
 	meshList[GEO_TARGET]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_TARGET], true);
-	modelStack.PopMatrix();
+	modelStack.PopMatrix();*/
 
 
 
@@ -426,8 +450,8 @@ void SceneShooting::Render()
 
 
 	// BOOTH ROOT – all booth geometry lives inside this push/pop.
-// Translate here if you ever want to move the whole booth at once.
-// ------------------------------------------------------------------
+	// Translate here if you ever want to move the whole booth at once.
+	// ------------------------------------------------------------------
 	modelStack.PushMatrix();                        // >>> BOOTH ROOT
 	modelStack.Translate(9.f, 0.f, 0.f);           // booth world origin
 
@@ -517,8 +541,9 @@ void SceneShooting::Render()
 	//   rail's centre, so moving the rail moves all targets with it.
 	// ------------------------------------------------------------------
 	modelStack.PushMatrix();                    // >>> RAIL PARENT
-	modelStack.Translate(0.f, 3.5f, -5.0f);    // rail world position
+	modelStack.Translate(0.f, 4.3f, -5.0f);    // rail world position
 	modelStack.Rotate(90.f, 0.f, 0.f, 1.f);    // lay cylinder along X axis
+	modelStack.Scale(1.f, 1.1f, 1.f);
 
 	// Render rail itself
 	meshList[GEO_TARGET_RAIL]->material.kAmbient = glm::vec3(0.2f, 0.2f, 0.22f);
@@ -540,14 +565,10 @@ void SceneShooting::Render()
 		// Undo parent's 90° Z rotation so child X/Y/Z feel normal
 		modelStack.Rotate(-90.f, 0.f, 0.f, 1.f);
 
-		// targets[i].position is in world space;
-		// subtract the rail's world origin to get local offset
-		float localX = targets[i].position.x - 0.f;   // rail centred at X=0
-		float localY = targets[i].position.y - 3.5f;   // rail at Y=3.5
-		// Z is the same as rail so local Z offset = 0
-		modelStack.Translate(localX, localY, 0.f);
+	
+		modelStack.Translate(targets[i].position.x, -1.2f, 0.f); // local X only
 
-		modelStack.Rotate(180.f, 0.f, 1.f, 0.f);       // face player
+		modelStack.Rotate(90.0f, 0, 1, 0);
 		modelStack.Scale(1.5f, 1.5f, 1.5f);
 
 		meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.2f, 0.1f, 0.1f);
@@ -583,6 +604,82 @@ void SceneShooting::Render()
 	}
 
 
+
+	// ---- MUZZLE FLASH ----
+	// Full-screen white quad flash on shoot
+	if (muzzleFlashTimer > 0.f)
+	{
+		RenderMeshOnScreen(meshList[GEO_GUI], 960.f, 540.f, 1920.f, 1080.f);
+	}
+
+	// ---- HUD: FIND GUN STATE ----
+	if (gameState == STATE_FIND_GUN)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"Find the gun to start!", glm::vec3(1, 1, 0), 30.f, 560.f, 540.f);
+
+		if (IsPlayerNearGun(2.5f))
+		{
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"[F] Pick up Gun", glm::vec3(1, 1, 1), 35.f, 660.f, 480.f);
+		}
+	}
+
+	// ---- HUD: PLAYING STATE ----
+	if (gameState == STATE_PLAYING)
+	{
+		// Bomb timer – format as M:SS
+		int   minutes = (int)(bombTimer / 60.f);
+		int   seconds = (int)(bombTimer) % 60;
+		char  timerBuf[32];
+		sprintf_s(timerBuf, "TIME: %d:%02d", minutes, seconds);
+
+		// Turn red when under 30 seconds
+		glm::vec3 timerColor = (bombTimer <= 30.f)
+			? glm::vec3(1, 0, 0)
+			: glm::vec3(1, 1, 1);
+
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			timerBuf, timerColor, 30.f, 30.f, 1020.f);
+
+		// Bullets
+		char bulletBuf[32];
+		sprintf_s(bulletBuf, "BULLETS: %d/%d", bulletsLeft, MAX_BULLETS);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			bulletBuf, glm::vec3(1, 1, 1), 30.f, 30.f, 980.f);
+
+		// Targets hit
+		char hitBuf[32];
+		sprintf_s(hitBuf, "HITS: %d/%d", targetsHit, NUM_TARGETS);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			hitBuf, glm::vec3(1, 1, 1), 30.f, 30.f, 940.f);
+
+		// Crosshair – centre of screen
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"+", glm::vec3(1, 1, 1), 40.f, 945.f, 520.f);
+	}
+
+	// ---- WIN SCREEN ----
+	if (gameState == STATE_WON)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"BOMB DEFUSED!", glm::vec3(0, 1, 0), 60.f, 560.f, 580.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"You saved the booth!", glm::vec3(1, 1, 1), 35.f, 620.f, 510.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"[R] Return to Lobby", glm::vec3(1, 1, 0), 35.f, 620.f, 460.f);
+	}
+
+	// ---- LOSE SCREEN ----
+	if (gameState == STATE_LOST)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 60.f, 530.f, 580.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"The booth is gone.", glm::vec3(1, 1, 1), 35.f, 630.f, 510.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"[R] Return to Lobby", glm::vec3(1, 1, 0), 35.f, 620.f, 460.f);
+	}
 
 }
 
@@ -720,7 +817,122 @@ void SceneShooting::RenderMeshOnScreen(Mesh* mesh, float x, float
 
 
 
+// --------------------------------------------------------------
+// IsPlayerNearGun()
+// Simple distance check between camera and gun world position
+// --------------------------------------------------------------
+bool SceneShooting::IsPlayerNearGun(float radius)
+{
+    glm::vec3 diff = camera.position - gunWorldPos;
+    float distSq   = glm::dot(diff, diff);
+    return distSq <= (radius * radius);
+}
 
+// --------------------------------------------------------------
+// RayHitTarget()
+// Casts a ray from camera through screen centre (crosshair).
+// Uses sphere radius check against each target's world position.
+// Target positions are LOCAL to the rail, so we reconstruct
+// world position: railWorldPos + localX along world X axis.
+// --------------------------------------------------------------
+bool SceneShooting::RayHitTarget(int index)
+{
+    // Rail world origin (must match your Render() translate)
+    glm::vec3 railWorldPos = glm::vec3(0.f, 3.5f, -5.0f);
+
+    // Reconstruct target world position from its local X offset
+    glm::vec3 targetWorldPos = railWorldPos;
+    targetWorldPos.x += targets[index].position.x;
+
+    // Hit sphere radius – tweak this to feel fair
+    float hitRadius = 1.2f;
+
+    // Ray origin = camera position
+    // Ray direction = normalised vector from camera to its target point
+    glm::vec3 rayOrigin = camera.position;
+    glm::vec3 rayDir    = glm::normalize(camera.target - camera.position);
+
+    // Vector from ray origin to sphere centre
+    glm::vec3 oc = targetWorldPos - rayOrigin;
+
+    // Project oc onto ray direction
+    float t = glm::dot(oc, rayDir);
+    if (t < 0.f) return false;  // target is behind camera
+
+    // Closest point on ray to sphere centre
+    glm::vec3 closest = rayOrigin + rayDir * t;
+
+    // Distance from closest point to sphere centre
+    float distSq    = glm::dot(targetWorldPos - closest, targetWorldPos - closest);
+    float radiusSq  = hitRadius * hitRadius;
+
+    return distSq <= radiusSq;
+}
+
+// --------------------------------------------------------------
+// Shoot()
+// Fires one bullet. Checks all alive targets for a hit.
+// Triggers muzzle flash. Checks lose condition (out of bullets).
+// --------------------------------------------------------------
+void SceneShooting::Shoot()
+{
+    if (bulletsLeft <= 0) return;
+
+    bulletsLeft--;
+    muzzleFlashTimer = 0.08f;   // flash duration in seconds
+
+    // Check every alive target for a hit
+    for (int i = 0; i < NUM_TARGETS; ++i)
+    {
+        if (!targets[i].isAlive) continue;
+
+        if (RayHitTarget(i))
+        {
+            targets[i].isAlive = false;
+            targetsHit++;
+            break;  // one bullet = one target max
+        }
+    }
+
+    // Out of bullets and haven't hit all targets = lose
+    if (bulletsLeft <= 0 && targetsHit < NUM_TARGETS)
+        gameState = STATE_LOST;
+}
+
+// --------------------------------------------------------------
+// ResetGame()
+// Restores everything to starting state.
+// Called if you want an in-scene restart (optional).
+// --------------------------------------------------------------
+void SceneShooting::ResetGame()
+{
+    gameState        = STATE_FIND_GUN;
+    bulletsLeft      = MAX_BULLETS;
+    targetsHit       = 0;
+    bombTimer        = 120.0f;
+    gunPickedUp      = false;
+    muzzleFlashTimer = 0.f;
+
+    // Reset targets to starting local positions
+    float railY = 3.5f;
+    float railZ = -5.0f;
+
+    targets[0] = { glm::vec3(-6.f, 0.f, 0.f), 2.5f, +1.f, -8.f, 8.f, true };
+    targets[1] = { glm::vec3(-3.f, 0.f, 0.f), 3.5f, -1.f, -8.f, 8.f, true };
+    targets[2] = { glm::vec3( 0.f, 0.f, 0.f), 2.0f, +1.f, -8.f, 8.f, true };
+    targets[3] = { glm::vec3( 3.f, 0.f, 0.f), 4.0f, -1.f, -8.f, 8.f, true };
+    targets[4] = { glm::vec3( 6.f, 0.f, 0.f), 3.0f, +1.f, -8.f, 8.f, true };
+
+    // Reset gun position
+    gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
+
+    // Reset camera
+    camera.Init(
+        glm::vec3(0.f, 2.1f, 8.f),
+        glm::vec3(0.f, 2.f,  0.f),
+        glm::vec3(0.f, 1.f,  0.f)
+    );
+}
 
 
 void SceneShooting::Exit()
@@ -793,36 +1005,54 @@ void SceneShooting::HandleKeyPress()
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
 	}
 
+
+
+
+
+
+
+
+
+	// --- F key: pick up gun ---
+	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		if (gameState == STATE_FIND_GUN && IsPlayerNearGun(2.5f))
+		{
+			gunPickedUp = true;
+			gameState = STATE_PLAYING;
+			bombTimer = 120.0f;   // start the 2-minute countdown
+		}
+	}
+
+	// --- R key: restart (only on win or lose screen) ---
+	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
+	{
+		if (gameState == STATE_WON || gameState == STATE_LOST)
+		{
+			// Mark game completed if won, then return to lobby
+			if (gameState == STATE_WON)
+				SceneManager::GetInstance()->gameCompleted[1] = true; // index 1 = shooting booth
+
+			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
+		}
+	}
+
+
 }
 
 void SceneShooting::HandleMouseInput() {
-	static bool isLeftUp = false;
-	static bool isRightUp = false;
+	static bool wasLeftDown = false;
 
-	// Process Left button
-	if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+	bool isLeftDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+
+	// Shoot on left click PRESS (not hold)
+	if (isLeftDown && !wasLeftDown)
 	{
-		isLeftUp = true;
-		std::cout << "LBUTTON DOWN" << std::endl;
-
-		// transform into UI space
-		double x = MouseController::GetInstance()->GetMousePositionX();
-		double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
-
-		// Check if mouse click position is within the GUI box
-		// Change the boundaries as necessary
-		if (x > 0 && x < 100 && y > 0 && y < 100) {
-			std::cout << "GUI IS CLICKED" << std::endl;
-		}
-
-	}
-	else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = false;
-		std::cout << "LBUTTON UP" << std::endl;
+		if (gameState == STATE_PLAYING)
+			Shoot();
 	}
 
-	// Continue to do for right button
+	wasLeftDown = isLeftDown;
 }
 
 
