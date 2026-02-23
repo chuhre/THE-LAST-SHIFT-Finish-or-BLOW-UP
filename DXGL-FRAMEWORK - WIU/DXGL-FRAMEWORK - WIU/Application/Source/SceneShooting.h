@@ -8,6 +8,8 @@
 #include "MatrixStack.h"
 #include "Light.h"
 #include <string>
+#include "PhysicsObject.h"
+#include "CollisionDetection.h"
 
 class SceneShooting : public Scene
 {
@@ -94,15 +96,34 @@ public:
 	// =====================================================
 	struct Target
 	{
-		glm::vec3 position;
-		float speed;        // units per second along X
-		float direction;    // +1.0 or -1.0
-		float minX, maxX;   // patrol bounds on the rail
-		bool  isAlive;
+		//glm::vec3 position;
+		//float speed;        // units per second along X
+		//float direction;    // +1.0 or -1.0
+		//float minX, maxX;   // patrol bounds on the rail
+		//bool  isAlive;
+		//bool  isFalling;        // true after hit, physics takes over
+
+		PhysicsObject physics;  // handles position + falling physics
+		float speed;            // units per second along X (looping)
+		float minX, maxX;       // loop bounds on X
+		bool  isAlive;          // false = fully dead (off floor)
+		bool  isFalling;        // true after bullet hit, physics takes over
 	};
 
+	// =====================================================
+	// PHYSICS OBJECT (for targets and bullets)
+	// =====================================================
+	struct Bullet
+	{
+		PhysicsObject physics;
+		bool active;
+	};
+
+	// ---- Update existing constants ----
 	static const int NUM_TARGETS = 5;
 	static const int MAX_BULLETS = 8;
+	static const int POOL_SIZE = 8;   // bullet pool size = MAX_BULLETS
+
 
 	// =====================================================
 	// LIFECYCLE
@@ -158,8 +179,9 @@ private:
 	glm::vec3 gunWorldPos;    // where the gun is lying on the floor
 	bool      gunPickedUp;
 
-	// ----- targets ----------------------------------------
+	// ----- targets and bullets ----------------------------------------
 	Target targets[NUM_TARGETS];
+	Bullet bulletPool[POOL_SIZE];
 
 	// ----- muzzle flash -----------------------------------
 	float muzzleFlashTimer;   // renders a white flash for ~0.05s on each shot
