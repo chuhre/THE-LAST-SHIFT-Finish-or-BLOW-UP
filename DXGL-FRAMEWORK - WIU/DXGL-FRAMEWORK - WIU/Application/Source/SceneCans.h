@@ -170,6 +170,7 @@ private:
 
 	//physics
 	void SpawnCans();
+	void SpawnBalls();
 	void ApplyGravity(PhysicsObject& obj, float dt);
 	void UpdateBall(float dt);
 	void UpdateCans(float dt);

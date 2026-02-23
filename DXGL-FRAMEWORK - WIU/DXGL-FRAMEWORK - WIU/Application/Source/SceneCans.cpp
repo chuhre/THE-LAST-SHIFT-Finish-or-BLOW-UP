@@ -153,7 +153,7 @@ void SceneCans::Init()
 	enableLight = true;
 
 	//initialise door 
-	door[0] = { glm::vec3(0.0f, 0.f, 15.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
+	door[0] = { glm::vec3(0.0f, 0.f, 14.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
 	door[1] = { glm::vec3(-9.75f, 0.f, 5.75f), 2.f, 3.5f, SceneManager::SCENE_LOBBY };
 
 	//GAME SETUP
@@ -285,6 +285,7 @@ void SceneCans::Render()
 	modelStack.PushMatrix();
 	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
 	modelStack.Rotate(door[0].rotation, 0, 1, 0);   // use Door's own rotation
+	modelStack.Rotate(180, 0, 1, 0);
 	modelStack.Scale(door[0].width, door[0].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -341,17 +342,24 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                     
 
-	////left wall L
-	//modelStack.PushMatrix();                    
-	//modelStack.Translate(-10.f, 4.f, 4.f);
-	//modelStack.Scale(0.3f, 8.f, 10.f);
-	//RenderMesh(meshList[GEO_WALL], true);      
-	//modelStack.PopMatrix();   
+	//left wall L
+	modelStack.PushMatrix();                    
+	modelStack.Translate(-10.f, 4.f, 10.5f);
+	modelStack.Scale(0.3f, 8.f, 7.f);
+	RenderMesh(meshList[GEO_WALL], true);      
+	modelStack.PopMatrix();   
 
 	//left wall R
 	modelStack.PushMatrix();
 	modelStack.Translate(-10.f, 4.f, -1.75f);
 	modelStack.Scale(0.3f, 8.f, 12.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//door frame
+	modelStack.PushMatrix();
+	modelStack.Translate(-10.f, 6.f, 5.f);
+	modelStack.Scale(0.3f, 4.f, 5.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
@@ -374,7 +382,7 @@ void SceneCans::Render()
 
 	//render ball on counter
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Translate(-0.25f, 0.7f, 0.f);
 	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
 	modelStack.Scale(20.f, 10.f, 9.f);
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -383,6 +391,15 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
 
+	//render 2nd ball
+	modelStack.PushMatrix();
+	modelStack.Translate(0.5f, 0.7f, 0.f);
+	modelStack.Scale(20.f, 10.f, 9.f);
+	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_BALL], true);
+	modelStack.PopMatrix();
 
 	modelStack.PopMatrix();
 
@@ -418,7 +435,68 @@ void SceneCans::Render()
 	modelStack.PopMatrix();
 
 
+	//side static tables
+	{
+		//left
+		modelStack.PushMatrix();
+		modelStack.Translate(-7.f, 0.f, -4.f);
+		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+		meshList[GEO_TABLE]->material.kShininess = 8.f;
+		RenderMesh(meshList[GEO_TABLE], true);
 
+		//render cans
+		for (int i = 0; i < NUM_CANS; ++i)
+		{
+			if (!m_cans[i].active) continue;
+			modelStack.PushMatrix();
+			modelStack.Translate(m_cans[i].can.pos.x, m_cans[i].can.pos.y + 0.75f, m_cans[i].can.pos.z - 1.5f);
+
+			if (m_cans[i].knocked)
+				modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
+
+			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_CAN], true);
+			modelStack.PopMatrix();
+		}
+		modelStack.PopMatrix();
+
+
+		//right
+		modelStack.PushMatrix();
+		modelStack.Translate(7.f, 0.f, -4.f);
+		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+		meshList[GEO_TABLE]->material.kShininess = 8.f;
+		RenderMesh(meshList[GEO_TABLE], true);
+
+		//render cans
+		for (int i = 0; i < NUM_CANS; ++i)
+		{
+			if (!m_cans[i].active) continue;
+			modelStack.PushMatrix();
+			modelStack.Translate(m_cans[i].can.pos.x, m_cans[i].can.pos.y + 0.75f, m_cans[i].can.pos.z - 1.5f);
+
+			if (m_cans[i].knocked)
+				modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
+
+			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_CAN], true);
+			modelStack.PopMatrix();
+		}
+		modelStack.PopMatrix();
+
+	}
 	
 
 }
@@ -626,6 +704,18 @@ void SceneCans::HandleKeyPress()
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
 	}
 
+	// --- R key: restart (only on win or lose screen) ---
+	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
+	{
+		if (gameState == GAME_WON || gameState == GAME_LOST)
+		{
+			// Mark game completed if won, then return to lobby
+			if (gameState == GAME_WON)
+				SceneManager::GetInstance()->gameCompleted[1] = true; // index 1 = shooting booth
+
+			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
+		}
+	}
 }
 
 void SceneCans::HandleMouseInput() {
@@ -755,7 +845,7 @@ void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
 void SceneCans::SpawnCans()
 {
 	const float counterTopY = 1.1f;
-	const float canH = 0.9f;   // visual height of one can (scaled)
+	const float canH = 0.8f;   // visual height of one can (scaled)
 	const float canSpacing = 0.7f;
 
 	// Bottom row — 3 cans
@@ -774,9 +864,14 @@ void SceneCans::SpawnCans()
 	{
 		m_cans[i].active = true;
 		m_cans[i].knocked = false;
-		m_cans[i].startPos = m_cans[i].can.pos;   // save for ResetGame()
+		m_cans[i].startPos = m_cans[i].can.pos;  
 		m_cans[i].can.vel = Vector3(0.f);
 	}
+}
+
+void SceneCans::SpawnBalls()
+{
+
 }
 
 void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
@@ -811,7 +906,8 @@ void SceneCans::LaunchBall()
 
 void SceneCans::ResetGame()
 {
-
+	SpawnCans();
+	SpawnBalls();
 }
 
 void SceneCans::DrawAimLine()
