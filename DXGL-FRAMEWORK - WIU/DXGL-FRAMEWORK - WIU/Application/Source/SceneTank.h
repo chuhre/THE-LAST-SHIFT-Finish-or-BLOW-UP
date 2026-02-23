@@ -20,6 +20,8 @@ public:
 
 		GEO_TARGET,
 		GEO_TANK,
+		GEO_BOX,
+		GEO_BOX2,
 
 		GEO_LEFT,
 		GEO_RIGHT,
