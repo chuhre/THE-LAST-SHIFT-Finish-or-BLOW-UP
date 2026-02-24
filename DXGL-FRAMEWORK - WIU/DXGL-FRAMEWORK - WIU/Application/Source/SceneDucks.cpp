@@ -18,6 +18,7 @@
 #include "KeyboardController.h"
 #include "MouseController.h"
 #include "LoadTGA.h"
+#include "SceneManager.h"
 
 SceneDucks::SceneDucks()
 {
@@ -105,7 +106,10 @@ void SceneDucks::Init()
 	meshList[GEO_DUCKREYE] = MeshBuilder::GenerateSphere("RighttDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
 	meshList[GEO_PEGHOOK] = MeshBuilder::GenerateOBJ("Peghook", "Models//peghook.obj");
 
-
+	// UI
+	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
+	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
+	meshList[GEO_GUI] = MeshBuilder::GenerateQuad("GUI", glm::vec3(1, 1, 1), 1.f);
 
 	// Environment (copy from SceneShooting)
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f),20.f, 0.2f, 15.f);
@@ -127,7 +131,15 @@ void SceneDucks::Init()
 
 	// ANIMATIONS
 
-
+	// ANIMATIONS
+	gameState = STATE_FIND_HOOK;
+	hookPickedUp = false;
+	hookWorldPos = glm::vec3(4.f, 0.5f, 5.f);
+	ducksPickedUp = 0;
+	catchTimer = 0.f;
+	duckAngle = 0.f;
+	duckRadius = 12.f;
+	duckSpeed = 1.f;
 
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
@@ -159,7 +171,14 @@ void SceneDucks::Init()
 
 }
 
-
+bool SceneDucks::IsPlayerNearHook(float radius)
+{
+	float dx = camera.position.x - hookWorldPos.x;
+	float dy = camera.position.y - hookWorldPos.y;
+	float dz = camera.position.z - hookWorldPos.z;
+	float distSq = dx * dx + dy * dy + dz * dz;
+	return distSq <= (radius * radius);
+}
 
 
 
@@ -189,14 +208,41 @@ void SceneDucks::Update(double dt)
 	camera.Update(dt);
 
 
-	// === ANIMATION/INTERACTIONS ====
+	//  ANIMATION/INTERACTIONS 
+
 
 	duckAngle += duckSpeed * (float)dt;
 	if (duckAngle > glm::two_pi<float>())
 		duckAngle -= glm::two_pi<float>();
 
+	if (catchTimer > 0.f)
+		catchTimer -= (float)dt;
 
+	// Check if hook catches a duck (only while playing)
+	if (gameState == STATE_PLAYING && hookPickedUp)
+	{
+		float duckWorldX = duckRadius * glm::cos(duckAngle);
+		float duckWorldZ = duckRadius * glm::sin(duckAngle);
 
+		glm::vec3 view = glm::normalize(camera.target - camera.position);
+		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+		glm::vec3 hookTip = camera.position + view * 2.f + right * 0.5f;
+
+		float dx = hookTip.x - duckWorldX;
+		float dz = hookTip.z - duckWorldZ;
+		float distSq = dx * dx + dz * dz;
+
+		if (distSq < 1.5f && catchTimer <= 0.f)  // cooldown prevents multi-catch
+		{
+			ducksPickedUp++;
+			catchTimer = 1.5f;
+			if (ducksPickedUp >= MAX_DUCKS)
+				gameState = STATE_WON;
+		}
+	}
+
+	//// ANIMATIONS
+	
 
 
 }
@@ -213,24 +259,6 @@ void SceneDucks::Render()
 		camera.target.x, camera.target.y, camera.target.z,
 		camera.up.x, camera.up.y, camera.up.z
 	);
-
-	modelStack.PushMatrix();
-	modelStack.LoadIdentity();
-
-	// Position it bottom-right of screen, like a first-person held item
-	// Tweak these values to taste
-	modelStack.Translate(2.5f, -1.5f, -3.f);       // right, down, forward
-	modelStack.Rotate(-20.f, 1.f, 0.f, 0.f);       // tilt down slightly
-	modelStack.Rotate(30.f, 0.f, 1.f, 0.f);       // angle toward camera
-	modelStack.Scale(0.8f, 0.8f, 0.8f);
-
-	meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
-	meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
-	meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
-	RenderMesh(meshList[GEO_PEGHOOK], true);
-
-	modelStack.PopMatrix();
 
 	// Load identity matrix into the model stack
 	modelStack.LoadIdentity();
@@ -273,6 +301,8 @@ void SceneDucks::Render()
 	// FLOOR
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, -2.0f, 0.f);
+	modelStack.Scale(5.f, 2.f, 5.0f);
+
 	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
 	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
 	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -384,80 +414,81 @@ void SceneDucks::Render()
 	modelStack.PopMatrix(); // POOL ROOT
 
 	modelStack.PopMatrix();                         // <<< BOOTH ROOT
-
-
-
-	/*modelStack.PushMatrix();
-	modelStack.Translate(4.f, 2.0f, 0.f);   
-	modelStack.Scale(5.f, 5.f, 3.f);          
-	meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
-	meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
-	meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
-	RenderMesh(meshList[GEO_PEGHOOK], true);
-	modelStack.PopMatrix();*/
-
-	//// Calculate view direction from your camera
-	//glm::vec3 view = glm::normalize(camera.target - camera.position);
-	//float pitch = glm::degrees(atan2(view.y, glm::length(glm::vec3(view.x, 0.f, view.z))));
-	//float yaw = glm::degrees(atan2(view.x, view.z));
-
-	//// Offset position: right of camera + slightly down
-	//glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
-	//glm::vec3 hookPos = camera.position
-	//	+ view * 1.5f      // forward
-	//	+ right * 0.5f      // right offset
-	//	+ glm::vec3(0, -0.5f, 0); // slightly down
-
-	//glClear(GL_DEPTH_BUFFER_BIT);         // always draw on top
-
-	//modelStack.PushMatrix();
-	//modelStack.Translate(hookPos.x, hookPos.y, hookPos.z);
-	//modelStack.Rotate(yaw, 0, 1, 0);
-	//modelStack.Rotate(pitch, 0, 0, 1);
-	//modelStack.Scale(1.5f, 1.5f, 1.5f);
-	//meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
-	//meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
-	//meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	//meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
-	//RenderMesh(meshList[GEO_PEGHOOK], true);
-	//modelStack.PopMatrix();
-
-	glm::vec3 view = glm::normalize(camera.target - camera.position);
-	glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
-	glm::vec3 up = glm::normalize(glm::cross(right, view));
-
-	// Position locked to camera
-	glm::vec3 hookPos = camera.position
-		+ view * 1.5f
-		+ right * 0.5f
-		+ up * -0.5f;
-
-	glClear(GL_DEPTH_BUFFER_BIT);
-
-	modelStack.PushMatrix();
-	modelStack.LoadIdentity();  // IMPORTANT - fresh matrix
-
-	// Build a matrix from camera axes directly
-	glm::mat4 cameraBasis = glm::mat4(
-		glm::vec4(right, 0.f),   // X axis
-		glm::vec4(up, 0.f),   // Y axis
-		glm::vec4(-view, 0.f),   // Z axis (negative view)
-		glm::vec4(hookPos, 1.f)    // position
-	);
-
-	modelStack.LoadMatrix(cameraBasis);
-	modelStack.Scale(2.6f, 2.6f, 2.6f);
-	modelStack.Rotate(180, 0, 1, 0);
-
-
-	meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
-	meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
-	meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
-	RenderMesh(meshList[GEO_PEGHOOK], true);
-	modelStack.PopMatrix();
 	
+	// Hook on floor (only before pickup)
+	if (!hookPickedUp)
+	{
+		modelStack.PushMatrix();
+		modelStack.Translate(hookWorldPos.x, hookWorldPos.y, hookWorldPos.z);
+		modelStack.Scale(3.f, 3.f, 3.f);
+		meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
+		meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
+		meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
+		RenderMesh(meshList[GEO_PEGHOOK], true);
+		modelStack.PopMatrix();
+	}
+
+	// Hook held in hand (only after pickup) — camera basis method
+	if (hookPickedUp)
+	{
+		glm::vec3 view = glm::normalize(camera.target - camera.position);
+		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+		glm::vec3 up = glm::normalize(glm::cross(right, view));
+		glm::vec3 hookPos = camera.position
+			+ view * 1.5f
+			+ right * 0.5f
+			+ up * (-0.5f);
+
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glm::mat4 cameraBasis = glm::mat4(
+			glm::vec4(right, 0.f),
+			glm::vec4(up, 0.f),
+			glm::vec4(-view, 0.f),
+			glm::vec4(hookPos, 1.f)
+		);
+
+		modelStack.PushMatrix();
+		modelStack.LoadIdentity();
+		modelStack.LoadMatrix(cameraBasis);
+		modelStack.Scale(2.6f, 2.6f, 2.6f);
+		modelStack.Rotate(180.f, 0.f, 1.f, 0.f);
+		meshList[GEO_PEGHOOK]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
+		meshList[GEO_PEGHOOK]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
+		meshList[GEO_PEGHOOK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		meshList[GEO_PEGHOOK]->material.kShininess = 64.f;
+		RenderMesh(meshList[GEO_PEGHOOK], true);
+		modelStack.PopMatrix();
+	}
+
+	// HUD
+	if (gameState == STATE_FIND_HOOK)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"Find the hook!", glm::vec3(1, 1, 0), 30.f, 90.f, 540.f);
+		if (IsPlayerNearHook(2.5f))
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"[F] Pick up Hook", glm::vec3(1, 1, 1), 35.f, 300.f, 480.f);
+	}
+	if (gameState == STATE_PLAYING)
+	{
+		char buf[32];
+		sprintf_s(buf, "Ducks: %d / %d", ducksPickedUp, MAX_DUCKS);
+		RenderTextOnScreen(meshList[GEO_TEXT], buf, glm::vec3(1, 1, 1), 30.f, 30.f, 560.f);
+		RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
+
+		if (catchTimer > 0.f)
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"GOT ONE!", glm::vec3(0, 1, 0), 50.f, 300.f, 400.f);
+	}
+	if (gameState == STATE_WON)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"You caught them all!", glm::vec3(0, 1, 0), 40.f, 200.f, 400.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"[R] Return to Lobby", glm::vec3(1, 1, 0), 30.f, 220.f, 340.f);
+	}
 
 	// render tests
 
@@ -674,6 +705,21 @@ void SceneDucks::HandleKeyPress()
 		}
 
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
+	}
+
+	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		if (gameState == STATE_FIND_HOOK && IsPlayerNearHook(2.5f))
+		{
+			hookPickedUp = true;
+			gameState = STATE_PLAYING;
+		}
+	}
+
+	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
+	{
+		if (gameState == STATE_WON)
+			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
 	}
 
 }

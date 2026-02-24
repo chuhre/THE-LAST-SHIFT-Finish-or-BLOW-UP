@@ -170,6 +170,8 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	muzzleFlashTimer = 0.f;
 	fps = 0.f;
 	playerLocked = false;
+	atBooth = false;
+	boothEntryPos = glm::vec3(0.f, 2.1f, 6.f);  // front of counter
 
 	// Fixed shooting position – centred behind counter
 	shootingPos = glm::vec3(0.f, 2.1f, 6.f);
@@ -734,12 +736,24 @@ void SceneShooting::Render()
 	// ---- HUD: FIND GUN STATE ----
 	if (gameState == STATE_FIND_GUN)
 	{
-		RenderTextOnScreen(meshList[GEO_TEXT],
-			"Find the gun!", glm::vec3(1, 1, 0), 30.f, 300.f, 540.f);
-
-		if (IsPlayerNearGun(2.5f))
+		if (!gunPickedUp)
+		{
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"[F] Step up to the booth", glm::vec3(1, 1, 1), 30.f, 250.f, 490.f);
+				"Find the gun!", glm::vec3(1, 1, 0), 30.f, 300.f, 540.f);
+
+			if (IsPlayerNearGun(2.5f))
+				RenderTextOnScreen(meshList[GEO_TEXT],
+					"[F] Pick up Gun", glm::vec3(1, 1, 1), 30.f, 280.f, 490.f);
+		}
+		else
+		{
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"Go to the booth!", glm::vec3(1, 1, 0), 30.f, 280.f, 540.f);
+
+			if (IsPlayerNearBooth(2.5f))
+				RenderTextOnScreen(meshList[GEO_TEXT],
+					"[F] Start Game", glm::vec3(1, 1, 1), 30.f, 300.f, 490.f);
+		}
 	}
 
 	// ---- HUD: PLAYING STATE ----
@@ -757,7 +771,7 @@ void SceneShooting::Render()
 			: glm::vec3(1, 1, 1);
 
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			timerBuf, timerColor, 30.f, 30.f, 1020.f);
+			timerBuf, timerColor, 30.f, 30.f, 80.f);
 
 		// Bullets
 		char bulletBuf[32];
@@ -949,45 +963,18 @@ bool SceneShooting::IsPlayerNearGun(float radius)
 }
 
 // --------------------------------------------------------------
-// RayHitTarget()
-// Casts a ray from camera through screen centre (crosshair).
-// Uses sphere radius check against each target's world position.
-// Target positions are LOCAL to the rail, so we reconstruct
-// world position: railWorldPos + localX along world X axis.
+// IsPlayerNearBooth()
+// Checks if player is within radius of booth entry point (in front of counter)
 // --------------------------------------------------------------
-//bool SceneShooting::RayHitTarget(int index)
-//{
-//    // Rail world origin (must match your Render() translate)
-//    glm::vec3 railWorldPos = glm::vec3(0.f, 3.5f, -5.0f);
-//
-//    // Reconstruct target world position from its local X offset
-//    glm::vec3 targetWorldPos = railWorldPos;
-//    targetWorldPos.x += targets[index].position.x;
-//
-//    // Hit sphere radius – tweak this to feel fair
-//    float hitRadius = 1.2f;
-//
-//    // Ray origin = camera position
-//    // Ray direction = normalised vector from camera to its target point
-//    glm::vec3 rayOrigin = camera.position;
-//    glm::vec3 rayDir    = glm::normalize(camera.target - camera.position);
-//
-//    // Vector from ray origin to sphere centre
-//    glm::vec3 oc = targetWorldPos - rayOrigin;
-//
-//    // Project oc onto ray direction
-//    float t = glm::dot(oc, rayDir);
-//    if (t < 0.f) return false;  // target is behind camera
-//
-//    // Closest point on ray to sphere centre
-//    glm::vec3 closest = rayOrigin + rayDir * t;
-//
-//    // Distance from closest point to sphere centre
-//    float distSq    = glm::dot(targetWorldPos - closest, targetWorldPos - closest);
-//    float radiusSq  = hitRadius * hitRadius;
-//
-//    return distSq <= radiusSq;
-//}
+bool SceneShooting::IsPlayerNearBooth(float radius)
+{
+	float dx = camera.position.x - boothEntryPos.x;
+	float dy = camera.position.y - boothEntryPos.y;
+	float dz = camera.position.z - boothEntryPos.z;
+	return (dx * dx + dy * dy + dz * dz) <= (radius * radius);
+}
+
+
 
 // --------------------------------------------------------------
 // Shoot()
@@ -1046,6 +1033,8 @@ void SceneShooting::ResetGame()
 	gunPickedUp = false;
 	muzzleFlashTimer = 0.f;
 	playerLocked = false;
+	atBooth = false;
+	boothEntryPos = glm::vec3(0.f, 2.1f, 6.f);  // front of counter
 
 	// Reset targets
 	float speed = 3.0f;
@@ -1167,16 +1156,19 @@ void SceneShooting::HandleKeyPress()
 
 	// --- F key: step up to booth and start game ---
 	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
-	{
-		if (gameState == STATE_FIND_GUN && IsPlayerNearGun(2.5f))
+	{// Step 1: pick up gun
+		if (!gunPickedUp && IsPlayerNearGun(2.5f))
 		{
 			gunPickedUp = true;
+			// just picks up gun, player still walks freely
+		}
+
+		// Step 2: walk to counter and press F to start
+		else if (gunPickedUp && !atBooth && IsPlayerNearBooth(2.5f))
+		{
+			atBooth = true;
 			playerLocked = true;
-
-			// Snap camera to fixed shooting position
-			camera.position = shootingPos;
-			camera.target = shootingTarget;
-
+			camera.Init(shootingPos, shootingTarget, glm::vec3(0.f, 1.f, 0.f));
 			gameState = STATE_PLAYING;
 			bombTimer = 120.0f;
 		}
