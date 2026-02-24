@@ -153,9 +153,9 @@ void SceneCans::Init()
 	enableLight = true;
 
 	//initialise door 
-	door[0] = { glm::vec3(0.0f, 0.f, 14.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
-	door[1] = { glm::vec3(-10.f, 0.f, 6.f), 2.f, 3.5f, SceneManager::SCENE_LOBBY };
-
+	door[0] = { glm::vec3(1.f, -0.1f, 14.5f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+	door[1] = { glm::vec3(-10.f, -0.1f, 6.25f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+		
 	//GAME SETUP
 	SpawnCans();
 	SpawnBalls();
@@ -266,6 +266,9 @@ void SceneCans::Update(double dt)
 		}
 		
 	}
+
+	//check ball collection
+	
 }
 
 void SceneCans::Render()
@@ -359,7 +362,8 @@ void SceneCans::Render()
 	modelStack.PopMatrix();                     
 
 	modelStack.PushMatrix();                   
-	modelStack.Translate(0.f, 8.f, 0.f);
+	modelStack.Translate(0.f, 8.f, 3.25f);
+	modelStack.Scale(1.f, 1.f, 1.5f);
 	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
 	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
 	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
@@ -367,7 +371,7 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_CEILING], true);
 	modelStack.PopMatrix();                     
 
-	//back wall
+	//front wall
 	modelStack.PushMatrix();                    
 	modelStack.Translate(0.f, 4.f, -7.5f);
 	modelStack.Scale(20.f, 8.f, 0.3f);
@@ -404,7 +408,37 @@ void SceneCans::Render()
 	modelStack.Translate(10.f, 4.f, 3.5f);
 	modelStack.Scale(0.3f, 8.f, 22.f);
 	RenderMesh(meshList[GEO_WALL], true);
-	modelStack.PopMatrix();                    
+	modelStack.PopMatrix();      
+
+	//back wall L
+	modelStack.PushMatrix();
+	modelStack.Translate(5.5f, 4.f, 14.5f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//back wall R
+	modelStack.PushMatrix();
+	modelStack.Translate(-5.5f, 4.f, 14.5f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//door frame
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 5.9f, 14.5f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 4.25f, 4.f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
 
 	//COUNTER
 	{
@@ -539,7 +573,7 @@ void SceneCans::Render()
 
 	}
 	
-
+	RenderHUD();
 }
 
 void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
@@ -939,6 +973,9 @@ void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
 
 void SceneCans::UpdateBall(float dt)
 {
+	//add ball when player picks up ball
+
+
 }
 
 void SceneCans::UpdateCans(float dt)
@@ -973,4 +1010,37 @@ void SceneCans::DrawAimLine()
 
 void SceneCans::RenderHUD()
 {
+
+	if (!ballCollected)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "Find the mising ball to start!", glm::vec3(1, 1, 0.5), 35, 20, 575);
+	}
+
+	std::string throwsText = "Throws left: " + std::to_string(m_throwsLeft);
+	RenderTextOnScreen(meshList[GEO_TEXT], throwsText, glm::vec3(1, 1, 1), 35, 20, 540);
+
+	int knocked = 0;
+	for (int i = 0; i < NUM_CANS; ++i) 
+		if (m_cans[i].knocked) knocked++;
+
+	std::string cansText = "Cans down: " + std::to_string(knocked) + "/" + std::to_string(NUM_CANS);
+	RenderTextOnScreen(meshList[GEO_TEXT], cansText, glm::vec3(1, 1, 1), 35, 20, 490);
+
+	//crosshair
+	RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40, 395, 290);
+
+	//end state
+	if (gameState == GAME_WON)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "YOU WIN!", glm::vec3(0, 1, 0), 60, 280, 300);
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F at the door to leave",
+			glm::vec3(1, 1, 0), 28, 200, 240);
+	}
+	else if (gameState == GAME_LOST)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "OUT OF BALLS!", glm::vec3(1, 0, 0), 50, 240, 300);
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press R to retry",
+			glm::vec3(1, 1, 1), 30, 310, 240);
+	}
+	
 }
