@@ -33,7 +33,7 @@ void Door::Close()
 bool Door::IsPlayerNear(const glm::vec3& playerPos, float radius) const
 {
     glm::vec3 diff = playerPos - position;
-    return glm::length(diff) < radius;
+    return glm::length(diff) <= radius;
 }
 
 bool Door::IsPlayerInside(const glm::vec3& playerPos, float playerHalfX, float playerHalfZ) const
@@ -45,45 +45,17 @@ bool Door::IsPlayerInside(const glm::vec3& playerPos, float playerHalfX, float p
 }
 
 bool Door::Update(double dt, const glm::vec3& playerPos, float playerHalfX, float playerHalfZ)
-{
-    fullyOpenedThisFrame = false;
-
-    if (isOpen)
+{    
+    // Animate door rotation
+    if (isOpen && rotation < 90.0f)
     {
-        // Swing open toward openAngle
-        if (std::abs(rotation) < std::abs(openAngle))
-        {
-            float dir = (openAngle >= 0.f) ? 1.f : -1.f;
-            rotation += dir * swingSpeed * static_cast<float>(dt);
-
-            // Clamp
-            if (std::abs(rotation) >= std::abs(openAngle))
-            {
-                rotation = openAngle;
-                isAnimating = false;
-
-                // Fire the walk-through check once per open completion
-                fullyOpenedThisFrame = true;
-            }
-        }
+        rotation += 90.0f * static_cast<float>(dt);
+        if (rotation > 90.0f) rotation = 90.0f;
     }
-    else
+    else if (!isOpen && rotation > 0.0f)
     {
-        // Swing closed toward 0
-        if (std::abs(rotation) > 0.f)
-        {
-            float dir = (rotation > 0.f) ? -1.f : 1.f;
-            rotation += dir * swingSpeed * static_cast<float>(dt);
-
-            if ((rotation > 0.f && dir < 0.f && rotation < 0.f) || rotation * dir > 0.f)
-                rotation = 0.f;
-
-            if (std::abs(rotation) < 0.01f)
-            {
-                rotation = 0.f;
-                isAnimating = false;
-            }
-        }
+        rotation -= 90.0f * static_cast<float>(dt);
+        if (rotation < 0.0f) rotation = 0.0f;
     }
 
     // Return true once the door is fully open AND the player is inside it

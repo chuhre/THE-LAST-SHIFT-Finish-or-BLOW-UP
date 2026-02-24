@@ -154,10 +154,13 @@ void SceneCans::Init()
 
 	//initialise door 
 	door[0] = { glm::vec3(0.0f, 0.f, 14.0f), 1.5f, 2.5f, SceneManager::SCENE_LOBBY };
-	door[1] = { glm::vec3(-9.75f, 0.f, 5.75f), 2.f, 3.5f, SceneManager::SCENE_LOBBY };
+	door[1] = { glm::vec3(-10.f, 0.f, 6.f), 2.f, 3.5f, SceneManager::SCENE_LOBBY };
 
 	//GAME SETUP
 	SpawnCans();
+	SpawnBalls();
+	gameState = GAME_NOT_STARTED;
+	
 }
 
 
@@ -201,15 +204,12 @@ void SceneCans::Update(double dt)
 		else 
 			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
 	}
-	
-	// F to open the door
 	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		door[0].Open();
 	}
 
-	bool playerWalkedThrough = door[0].Update(dt, camera.position,	playerSize.x * 0.5f,playerSize.z * 0.5f);
-	if (playerWalkedThrough)
+	if (door[0].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
 	{
 		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
 		door[0].Close();
@@ -220,18 +220,52 @@ void SceneCans::Update(double dt)
 	if (door[1].IsPlayerNear(camera.position, 2.5f))
 	{
 		door[1].Open();
+		door[1].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f);
 	}
 
-	if (door[1].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
+	
+
+	//game logic
+	if (ballCollected) 
 	{
-		door[1].Close();
-	}
-	
-	
-	//check if player wins
+		gameState = GAME_PLAYING;
+		m_noOfBalls++;
+		m_throwsLeft++;
 
-	//if player wins
-	SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = true;
+	}
+
+
+	if (gameState == GAME_PLAYING)
+	{
+		if (m_balls->inAir)
+		{
+			UpdateBall(static_cast<float>(dt));
+			CheckBallCanCollisions();
+			CheckFloorCollisions();
+		}
+
+		UpdateCans(static_cast<float>(dt));
+		CheckCanCanCollisions();
+
+		//check if all cans knocked
+		if (m_throwsLeft == 0)
+		{
+			int knocked = 0;
+			for (int i = 0; i < NUM_CANS; ++i)
+				if (m_cans[i].knocked) knocked++;
+
+			if (knocked == NUM_CANS)
+			{
+				gameState = GAME_WON;
+				SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = true;
+			}
+			else if (!m_balls->inAir && m_throwsLeft <= 0)
+			{
+				gameState = GAME_LOST;
+			}
+		}
+		
+	}
 }
 
 void SceneCans::Render()
@@ -284,8 +318,9 @@ void SceneCans::Render()
 	//render main door
 	modelStack.PushMatrix();
 	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
-	modelStack.Rotate(door[0].rotation, 0, 1, 0);   // use Door's own rotation
+	modelStack.Rotate(door[0].rotation, 0, 1, 0);   
 	modelStack.Rotate(180, 0, 1, 0);
+	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f);
 	modelStack.Scale(door[0].width, door[0].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -296,7 +331,8 @@ void SceneCans::Render()
 	//side door
 	modelStack.PushMatrix();
 	modelStack.Translate(door[1].position.x, door[1].position.y, door[1].position.z);
-	modelStack.Rotate(door[1].rotation + 90.f, 0, 1, 0);   // use Door's own rotation
+	modelStack.Rotate(door[1].rotation + 90.f, 0, 1, 0);   
+	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f);  //shift door right
 	modelStack.Scale(door[1].width, door[1].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -345,7 +381,7 @@ void SceneCans::Render()
 	//left wall L
 	modelStack.PushMatrix();                    
 	modelStack.Translate(-10.f, 4.f, 10.5f);
-	modelStack.Scale(0.3f, 8.f, 7.f);
+	modelStack.Scale(0.3f, 8.f, 8.5f);
 	RenderMesh(meshList[GEO_WALL], true);      
 	modelStack.PopMatrix();   
 
@@ -358,8 +394,8 @@ void SceneCans::Render()
 
 	//door frame
 	modelStack.PushMatrix();
-	modelStack.Translate(-10.f, 6.f, 5.f);
-	modelStack.Scale(0.3f, 4.f, 5.f);
+	modelStack.Translate(-10.f, 5.85f, 5.f);
+	modelStack.Scale(0.3f, 4.25f, 5.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
@@ -371,75 +407,56 @@ void SceneCans::Render()
 	modelStack.PopMatrix();                    
 
 	//COUNTER
-	modelStack.PushMatrix();                   
-	modelStack.Translate(0.f, 0.5f, 1.5f);     
-	modelStack.Scale(1.f, 2.5f, 2.5f);
-	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
-	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
-	meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
-	meshList[GEO_COUNTER]->material.kShininess = 8.f;
-	RenderMesh(meshList[GEO_COUNTER], true);
+	{
+		//render counter
+		modelStack.PushMatrix();
+		modelStack.Translate(0.f, 0.5f, 1.5f);
+		modelStack.Scale(1.f, 2.5f, 2.5f);
+		meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+		meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+		meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+		meshList[GEO_COUNTER]->material.kShininess = 8.f;
+		RenderMesh(meshList[GEO_COUNTER], true);
 
-	//render ball on counter
+		//render ball on counter
+		modelStack.PushMatrix();
+		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
+		modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+		modelStack.Scale(20.f, 8.f, 8.f);
+		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		RenderMesh(meshList[GEO_BALL], true);
+		modelStack.PopMatrix();
+
+		//render 2nd ball
+		modelStack.PushMatrix();
+		modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
+		modelStack.Scale(20.f, 8.f, 8.f);
+		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		RenderMesh(meshList[GEO_BALL], true);
+		modelStack.PopMatrix();
+
+		modelStack.PopMatrix();
+	}
+	
+	//rernder missing ball
 	modelStack.PushMatrix();
-	modelStack.Translate(-0.25f, 0.7f, 0.f);
-	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
-	modelStack.Scale(20.f, 10.f, 9.f);
+	modelStack.Translate(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
+	modelStack.Scale(20.f, 20.f, 20.f);
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
-
-	//render 2nd ball
-	modelStack.PushMatrix();
-	modelStack.Translate(0.5f, 0.7f, 0.f);
-	modelStack.Scale(20.f, 10.f, 9.f);
-	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	RenderMesh(meshList[GEO_BALL], true);
-	modelStack.PopMatrix();
-
-	modelStack.PopMatrix();
-
 
 
 	//MAIN TABLE 
-	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.f, -4.f);
-	modelStack.Scale(1.25f, 1.25f, 1.25f);
-	meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
-	meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
-	meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
-	meshList[GEO_TABLE]->material.kShininess = 8.f;
-	RenderMesh(meshList[GEO_TABLE], true);
-
-	//render cans
-	for (int i = 0; i < NUM_CANS; ++i)
 	{
-		if (!m_cans[i].active) continue;
 		modelStack.PushMatrix();
-		modelStack.Translate(m_cans[i].can.pos.x, m_cans[i].can.pos.y + 0.75f, m_cans[i].can.pos.z - 1.5f);
-
-		if (m_cans[i].knocked)
-			modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
-
-		modelStack.Scale(0.3f, 0.3f, 0.3f);
-		meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-		meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-		meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-		RenderMesh(meshList[GEO_CAN], true);
-		modelStack.PopMatrix();
-	}
-	modelStack.PopMatrix();
-
-
-	//side static tables
-	{
-		//left
-		modelStack.PushMatrix();
-		modelStack.Translate(-7.f, 0.f, -4.f);
+		modelStack.Translate(0.f, 0.f, -4.f);
 		modelStack.Scale(1.25f, 1.25f, 1.25f);
 		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
@@ -465,6 +482,35 @@ void SceneCans::Render()
 			modelStack.PopMatrix();
 		}
 		modelStack.PopMatrix();
+	}
+	
+
+
+	//side static tables
+	{
+		//left
+		modelStack.PushMatrix();
+		modelStack.Translate(-7.f, 0.f, -4.f);
+		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+		meshList[GEO_TABLE]->material.kShininess = 8.f;
+		RenderMesh(meshList[GEO_TABLE], true);
+
+		//render cans
+		for (int i = 0; i < NUM_CANS; ++i)
+		{
+			modelStack.PushMatrix();
+			modelStack.Translate(m_staticCanPos[i].x,m_staticCanPos[i].y + 0.75f,m_staticCanPos[i].z - 1.5f);
+			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_CAN], true);
+			modelStack.PopMatrix();
+		}
+		modelStack.PopMatrix();
 
 
 		//right
@@ -480,13 +526,8 @@ void SceneCans::Render()
 		//render cans
 		for (int i = 0; i < NUM_CANS; ++i)
 		{
-			if (!m_cans[i].active) continue;
 			modelStack.PushMatrix();
-			modelStack.Translate(m_cans[i].can.pos.x, m_cans[i].can.pos.y + 0.75f, m_cans[i].can.pos.z - 1.5f);
-
-			if (m_cans[i].knocked)
-				modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
-
+			modelStack.Translate(m_staticCanPos[i].x, m_staticCanPos[i].y + 0.75f, m_staticCanPos[i].z - 1.5f);
 			modelStack.Scale(0.3f, 0.3f, 0.3f);
 			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -848,6 +889,7 @@ void SceneCans::SpawnCans()
 	const float canH = 0.8f;   // visual height of one can (scaled)
 	const float canSpacing = 0.7f;
 
+	//interactive cans
 	// Bottom row — 3 cans
 	m_cans[0].can.pos = Vector3(-canSpacing, counterTopY, 1.5f);
 	m_cans[1].can.pos = Vector3(0.f, counterTopY, 1.5f);
@@ -867,10 +909,25 @@ void SceneCans::SpawnCans()
 		m_cans[i].startPos = m_cans[i].can.pos;  
 		m_cans[i].can.vel = Vector3(0.f);
 	}
+
+	//decorative cans
+	m_staticCanPos[0] = glm::vec3(-canSpacing, counterTopY, 1.5f);
+	m_staticCanPos[1] = glm::vec3(0.f, counterTopY, 1.5f);
+	m_staticCanPos[2] = glm::vec3(canSpacing, counterTopY, 1.5f);
+	m_staticCanPos[3] = glm::vec3(-canSpacing * 0.5f, counterTopY + canH, 1.5f);
+	m_staticCanPos[4] = glm::vec3(canSpacing * 0.5f, counterTopY + canH, 1.5f);
+	m_staticCanPos[5] = glm::vec3(0.f, counterTopY + canH * 2.f, 1.5f);
 }
 
 void SceneCans::SpawnBalls()
 {
+	m_noOfBalls = 2;
+	m_throwsLeft = 2;
+
+	//initialise balls pos
+	m_balls[0].ball.pos = Vector3(-0.25f, 0.7f, 0.f);
+	m_balls[1].ball.pos = Vector3(0.5f, 0.7f, 0.f);
+	m_balls[2].ball.pos = Vector3(-15.75f, 1.f, 10.f);
 
 }
 

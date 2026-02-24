@@ -22,14 +22,14 @@ public:
 		GEO_SPHERE,
 		GEO_CUBE,
 		GEO_PLANE,
-		
+
 		GEO_LEFT,
 		GEO_RIGHT,
 		GEO_TOP,
 		GEO_BOTTOM,
 		GEO_FRONT,
 		GEO_BACK,
-		
+
 		GEO_DOOR,
 
 		GEO_FLOOR,
@@ -89,7 +89,7 @@ public:
 		GAME_LOST
 	};
 
-	struct Can 
+	struct Can
 	{
 		PhysicsObject can;
 		float radius = 1.5f;
@@ -99,7 +99,7 @@ public:
 		Vector3 startPos;
 	};
 
-	struct Ball 
+	struct Ball
 	{
 		PhysicsObject ball;
 		float radius = 1.2f;
@@ -126,7 +126,7 @@ private:
 
 	void RenderMesh(Mesh* mesh, bool enableLight);
 	void RenderSkybox();
-	void RenderMeshOnScreen(Mesh* mesh, float x, float y,float sizex, float sizey);
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
 	void RenderText(Mesh* mesh, std::string text, glm::vec3	color);
 	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
 
@@ -150,15 +150,17 @@ private:
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
 	bool showInteractPrompt;
-	
+
 	// Game state
 	GameState gameState;
-	int  m_throwsLeft = 3;
-	int  m_score = 0;
 
+	//cans
 	Can m_cans[NUM_CANS];
-	Ball m_ball;
+	glm::vec3 m_staticCanPos[NUM_CANS];
 
+	Ball m_balls[MAX_BALLS];
+	int m_noOfBalls;
+	int  m_throwsLeft;
 	bool ballCollected;
 
 	
