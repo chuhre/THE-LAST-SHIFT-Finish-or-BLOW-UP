@@ -157,6 +157,7 @@ private:
 	bool RayHitTarget(int index);       // hitscan from camera through crosshair
 	void ResetGame();
 	bool IsPlayerNearGun(float radius);
+	bool IsPlayerNearBooth(float radius);
 
 	// ----- GL handles -------------------------------------
 	unsigned m_vertexArrayID;
@@ -183,6 +184,8 @@ private:
 	// ----- gun (the missing element) ---------------------
 	glm::vec3 gunWorldPos;    // where the gun is lying on the floor
 	bool      gunPickedUp;
+	bool atBooth;            // true - after player walks to counter
+	glm::vec3 boothEntryPos; // position near counter to trigger start
 
 	// ----- targets and bullets ----------------------------------------
 	Target targets[NUM_TARGETS];
