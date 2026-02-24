@@ -268,7 +268,14 @@ void SceneCans::Update(double dt)
 	}
 
 	//check ball collection
-	
+
+	/*if (dist.length() < 2.f)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to collect", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
+		ballCollected = true;
+		m_noOfBalls++;
+		m_throwsLeft++;
+	}*/
 }
 
 void SceneCans::Render()
@@ -335,7 +342,7 @@ void SceneCans::Render()
 	modelStack.PushMatrix();
 	modelStack.Translate(door[1].position.x, door[1].position.y, door[1].position.z);
 	modelStack.Rotate(door[1].rotation + 90.f, 0, 1, 0);   
-	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f);  //shift door right
+	modelStack.Translate(door[1].width * 0.5f, 0.f, 0.f);  //shift door right
 	modelStack.Scale(door[1].width, door[1].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -794,33 +801,17 @@ void SceneCans::HandleKeyPress()
 }
 
 void SceneCans::HandleMouseInput() {
-	static bool isLeftUp = false;
-	static bool isRightUp = false;
+	static bool wasDown = false;
+	bool isDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
 
-	// Process Left button
-	if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+	if (isDown && !wasDown)   // on press
 	{
-		isLeftUp = true;
-		std::cout << "LBUTTON DOWN" << std::endl;
+		wasDown = true;
 
-		// transform into UI space
-		double x = MouseController::GetInstance()->GetMousePositionX();
-		double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
-
-		// Check if mouse click position is within the GUI box
-		// Change the boundaries as necessary
-		if (x > 0 && x < 100 && y > 0 && y < 100) {
-			std::cout << "GUI IS CLICKED" << std::endl;
-		}
-
+		if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls->inAir)
+			LaunchBall();
 	}
-	else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = false;
-		std::cout << "LBUTTON UP" << std::endl;
-	}
-
-	// Continue to do for right button
+	wasDown = isDown;
 }
 
 
@@ -980,6 +971,7 @@ void SceneCans::UpdateBall(float dt)
 
 void SceneCans::UpdateCans(float dt)
 {
+
 }
 
 void SceneCans::CheckBallCanCollisions()
@@ -996,6 +988,7 @@ void SceneCans::CheckFloorCollisions()
 
 void SceneCans::LaunchBall()
 {
+
 }
 
 void SceneCans::ResetGame()

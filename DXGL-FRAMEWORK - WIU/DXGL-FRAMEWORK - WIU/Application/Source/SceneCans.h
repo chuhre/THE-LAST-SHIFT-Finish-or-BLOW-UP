@@ -158,7 +158,9 @@ private:
 	Can m_cans[NUM_CANS];
 	glm::vec3 m_staticCanPos[NUM_CANS];
 
-	Ball m_balls[MAX_BALLS];
+
+	//balls
+	Ball m_balls[3];
 	int m_noOfBalls;
 	int  m_throwsLeft;
 	bool ballCollected;
