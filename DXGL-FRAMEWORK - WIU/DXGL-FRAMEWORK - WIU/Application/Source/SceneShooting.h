@@ -96,13 +96,6 @@ public:
 	// =====================================================
 	struct Target
 	{
-		//glm::vec3 position;
-		//float speed;        // units per second along X
-		//float direction;    // +1.0 or -1.0
-		//float minX, maxX;   // patrol bounds on the rail
-		//bool  isAlive;
-		//bool  isFalling;        // true after hit, physics takes over
-
 		PhysicsObject physics;  // handles position + falling physics
 		float speed;            // units per second along X (looping)
 		float minX, maxX;       // loop bounds on X
@@ -123,6 +116,18 @@ public:
 	static const int NUM_TARGETS = 5;
 	static const int MAX_BULLETS = 8;
 	static const int POOL_SIZE = 8;   // bullet pool size = MAX_BULLETS
+
+	// Patrol zones for targets (only used for looping movement, not falling)
+	struct Zone { float minX, maxX, startX; };
+	Zone zones[NUM_TARGETS] = {
+		{ -8.0f, -4.8f, -8.0f },   // target 0 patrols leftmost zone
+		{ -4.8f, -1.6f, -4.8f },   // target 1
+		{ -1.6f,  1.6f, -1.6f },   // target 2 (centre)
+		{  1.6f,  4.8f,  1.6f },   // target 3
+		{  4.8f,  8.0f,  4.8f },   // target 4 patrols rightmost zone
+	};
+
+	float speeds[NUM_TARGETS] = { 2.5f, 3.5f, 2.0f, 4.0f, 3.0f };
 
 
 	// =====================================================
@@ -182,6 +187,9 @@ private:
 	// ----- targets and bullets ----------------------------------------
 	Target targets[NUM_TARGETS];
 	Bullet bulletPool[POOL_SIZE];
+	bool      playerLocked;
+	glm::vec3 shootingPos;
+	glm::vec3 shootingTarget;
 
 	// ----- muzzle flash -----------------------------------
 	float muzzleFlashTimer;   // renders a white flash for ~0.05s on each shot
