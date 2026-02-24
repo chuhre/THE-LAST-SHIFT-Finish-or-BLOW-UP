@@ -169,6 +169,11 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	gunPickedUp = false;
 	muzzleFlashTimer = 0.f;
 	fps = 0.f;
+	playerLocked = false;
+
+	// Fixed shooting position – centred behind counter
+	shootingPos = glm::vec3(0.f, 2.1f, 6.f);
+	shootingTarget = glm::vec3(0.f, 3.5f, -5.f);  // looking at rail
 
 	// Gun lying on the floor – to the right side, easy to spot
 	gunWorldPos = glm::vec3(7.f, 0.6f, 7.f);
@@ -179,15 +184,19 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	// Evenly spaced 3 units apart
 	float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
 	float speeds[NUM_TARGETS] = { 2.5f,  3.5f, 2.0f, 4.0f, 3.0f };
+	float speed = 3.0f;  // same speed for all targets
 
 	for (int i = 0; i < NUM_TARGETS; ++i)
 	{
-		targets[i].physics.pos = Vector3(startPositions[i], 0.f, 0.f);
+		// Evenly spaced 3 units apart across the rail
+		float startX = -6.f + (i * 3.f);  // -6, -3, 0, 3, 6
+
+		targets[i].physics.pos = Vector3(startX, 0.f, 0.f);
 		targets[i].physics.vel = Vector3(0.f, 0.f, 0.f);
 		targets[i].physics.accel = Vector3(0.f, 0.f, 0.f);  // no gravity until hit
 		targets[i].physics.mass = 1.f;
 		targets[i].physics.bounciness = 0.f;   // targets don't bounce when they fall
-		targets[i].speed = speeds[i];
+		targets[i].speed = speed;
 		targets[i].minX = -8.f;
 		targets[i].maxX = 8.f;
 		targets[i].isAlive = true;
@@ -200,7 +209,7 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 		bulletPool[i].active = false;
 		bulletPool[i].physics.pos = Vector3(0.f, 0.f, 0.f);
 		bulletPool[i].physics.vel = Vector3(0.f, 0.f, 0.f);
-		bulletPool[i].physics.accel = Vector3(0.f, -9.8f, 0.f);  // gravity always on
+		bulletPool[i].physics.accel = Vector3(0.f, -2.0f, 0.f);  // very slight gravity
 		bulletPool[i].physics.mass = 0.1f;
 		bulletPool[i].physics.bounciness = 0.f;
 	}
@@ -260,11 +269,24 @@ void SceneShooting::Update(double dt)
 
 
 	// Store position before camera update
-	glm::vec3 oldPos = camera.position;
+	//glm::vec3 oldPos = camera.position;
 
-	// Update camera position based on input
-	camera.Update(dt);
+	//// Update camera position based on input
+	//camera.Update(dt);
 
+	// --- Camera update ---
+	if (playerLocked)
+	{
+		// Lock camera to fixed shooting position
+		camera.position = shootingPos;
+		camera.target = shootingTarget;
+	}
+	else
+	{
+		camera.Update(dt);
+	}
+
+	float fdt = static_cast<float>(dt);
 
 
 
@@ -278,55 +300,57 @@ void SceneShooting::Update(double dt)
 
 
 	// === ANIMATION/INTERACTIONS ====
-	// --- Target movement (only while playing) ---
+	// --- STATE_FIND_GUN: just let player walk around ---
+	if (gameState == STATE_FIND_GUN)
+	{
+		// Nothing extra needed, player walks freely
+	}
+
+	// --- STATE_PLAYING ---
 	if (gameState == STATE_PLAYING)
 	{
-		float fdt = static_cast<float>(dt);
-
-		// ---- Update targets ----
+		// ---- Target movement ----
 		for (int i = 0; i < NUM_TARGETS; ++i)
 		{
 			if (!targets[i].isAlive) continue;
 
 			if (!targets[i].isFalling)
 			{
-				// Normal looping movement along local X
+				// Conveyor loop: all move right at same speed
 				targets[i].physics.pos.x += targets[i].speed * fdt;
 
-				// Wrap: when reaching maxX, jump back to minX
-				if (targets[i].physics.pos.x >= targets[i].maxX)
+				if (targets[i].physics.pos.x > targets[i].maxX)
 					targets[i].physics.pos.x = targets[i].minX;
 			}
 			else
 			{
-				// Falling: physics takes over with gravity
+				// Falling: physics with gravity
 				targets[i].physics.UpdatePhysics(fdt);
 
-				// Rail is at world Y=3.5, local Y=0 means on the rail.
-				// Floor in local space relative to rail = -3.5 (world Y=0)
+				// Floor in local rail space = -3.5 (rail is at world Y=3.5)
 				if (targets[i].physics.pos.y <= -3.5f)
 				{
 					targets[i].physics.pos.y = -3.5f;
-					targets[i].isAlive = false;  // fully dead, stop rendering
+					targets[i].isAlive = false;
 				}
 			}
 		}
 
-		// ---- Update bullets ----
+		// ---- Bullet update ----
 		for (int i = 0; i < POOL_SIZE; ++i)
 		{
 			if (!bulletPool[i].active) continue;
 
 			bulletPool[i].physics.UpdatePhysics(fdt);
 
-			// Deactivate bullet if it hits the floor (world Y=0)
+			// Deactivate if hits floor
 			if (bulletPool[i].physics.pos.y <= 0.f)
 			{
 				bulletPool[i].active = false;
 				continue;
 			}
 
-			// Deactivate bullet if it goes out of bounds
+			// Deactivate if out of bounds
 			if (bulletPool[i].physics.pos.z < -8.f ||
 				bulletPool[i].physics.pos.x < -12.f ||
 				bulletPool[i].physics.pos.x >  12.f)
@@ -340,35 +364,29 @@ void SceneShooting::Update(double dt)
 			{
 				if (!targets[j].isAlive || targets[j].isFalling) continue;
 
-				// Reconstruct target world position from local rail offset
-				// Rail world origin: X=0, Y=3.5, Z=-5
+				// Reconstruct target world position
+				// Rail is at world (0, 3.5, -5), target local X offsets along world X
 				Vector3 targetWorldPos(
-					targets[j].physics.pos.x,          // local X = world X (rail centred at 0)
-					targets[j].physics.pos.y + 3.5f,   // local Y + rail world Y
-					-5.0f                               // rail world Z
+					targets[j].physics.pos.x,
+					targets[j].physics.pos.y + 3.5f,
+					-5.0f
 				);
 
-				float bulletRadius = 0.1f;
+				float bulletRadius = 0.15f;
 				float targetRadius = 1.0f;
 
-				CollisionData cd;
-				// Temporarily set bullet physics pos to world space for collision check
-				Vector3 bulletWorldPos = bulletPool[i].physics.pos;
-
 				if (OverlapCircle2Circle(
-					bulletWorldPos, bulletRadius,
+					bulletPool[i].physics.pos, bulletRadius,
 					targetWorldPos, targetRadius))
 				{
-					// Hit! Start falling
+					// Target hit – start falling
 					targets[j].isFalling = true;
-					targets[j].physics.accel = Vector3(0.f, -9.8f, 0.f);  // gravity on
-					targets[j].physics.vel = Vector3(0.f, -1.f, 0.f);   // small initial drop
+					targets[j].physics.accel = Vector3(0.f, -9.8f, 0.f);
+					targets[j].physics.vel = Vector3(0.f, -1.f, 0.f);
 					targetsHit++;
 
-					// Deactivate bullet
 					bulletPool[i].active = false;
 
-					// Check win
 					if (targetsHit >= NUM_TARGETS)
 						gameState = STATE_WON;
 
@@ -378,17 +396,36 @@ void SceneShooting::Update(double dt)
 		}
 
 		// ---- Bomb timer ----
-		bombTimer -= static_cast<float>(dt);
+		bombTimer -= fdt;
 		if (bombTimer <= 0.f)
 		{
 			bombTimer = 0.f;
 			gameState = STATE_LOST;
 		}
+
+		// ---- Out of bullets lose check ----
+		// Count active bullets still in air
+		int activeBullets = 0;
+		for (int i = 0; i < POOL_SIZE; ++i)
+			if (bulletPool[i].active) activeBullets++;
+
+		if (bulletsLeft <= 0 && activeBullets == 0 && targetsHit < NUM_TARGETS)
+			gameState = STATE_LOST;
 	}
 
-	// ---- Muzzle flash decay ----
+	// --- STATE_WON: unlock camera so player can walk freely ---
+	if (gameState == STATE_WON)
+	{
+		playerLocked = false;
+		// camera.Update(dt) already called above since playerLocked = false
+	}
+
+	// --- STATE_LOST: camera stays locked (at booth) ---
+	// Player presses R to restart in place (handled in HandleKeyPress)
+
+	// Muzzle flash decay
 	if (muzzleFlashTimer > 0.f)
-		muzzleFlashTimer -= static_cast<float>(dt);
+		muzzleFlashTimer -= fdt;
 
 	fps = static_cast<float>(1.0 / dt);
 
@@ -494,7 +531,7 @@ void SceneShooting::Render()
 	// Translate here if you ever want to move the whole booth at once.
 	// ------------------------------------------------------------------
 	modelStack.PushMatrix();                        // >>> BOOTH ROOT
-	modelStack.Translate(9.f, 0.f, 0.f);           // booth world origin
+	modelStack.Translate(0.f, 0.f, 0.f);           // booth world origin
 
 	// ---- FLOOR ----
 	modelStack.PushMatrix();                    // >>> Floor
@@ -549,6 +586,7 @@ void SceneShooting::Render()
 	// ------------------------------------------------------------------
 	modelStack.PushMatrix();                    // >>> COUNTER PARENT
 	modelStack.Translate(0.f, 0.5f, 1.5f);     // counter world position
+	modelStack.Scale(1.f, 2.f, 2.5f);
 
 	// Render counter itself
 	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
@@ -557,12 +595,16 @@ void SceneShooting::Render()
 	meshList[GEO_COUNTER]->material.kShininess = 8.f;
 	RenderMesh(meshList[GEO_COUNTER], true);
 
+	modelStack.PopMatrix();                     // <<< COUNTER PARENT
+
 	// ---- BOMB (CHILD of Counter) ----
 	// Offset: +0.5 in Y (sits on top of counter surface),
 	//         -7 in X (left end of counter)
 	// No extra Z needed – inherits counter's Z=1.5
 	modelStack.PushMatrix();                // >>> BOMB CHILD
-	modelStack.Translate(-7.f, 0.85f, 0.f);
+	modelStack.Translate(-7.f, 1.8f, 1.5f);
+	modelStack.Scale(1.f, 1.f, 1.f);
+
 	meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
 	meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
 	meshList[GEO_BOMB]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
@@ -570,7 +612,6 @@ void SceneShooting::Render()
 	RenderMesh(meshList[GEO_BOMB], true);
 	modelStack.PopMatrix();                 // <<< BOMB CHILD
 
-	modelStack.PopMatrix();                     // <<< COUNTER PARENT
 
 
 	// ------------------------------------------------------------------
@@ -602,7 +643,7 @@ void SceneShooting::Render()
 		if (!targets[i].isAlive) continue;
 
 		modelStack.PushMatrix();
-		modelStack.Translate(-1.1f, 0.f, 0.f);   // start at rail origin
+		modelStack.Translate(-1.1f, 0.f, 0.f);   
 		modelStack.Rotate(-90.f, 0.f, 0.f, 1.f);   // undo rail rotation
 
 		if (!targets[i].isFalling)
@@ -694,13 +735,11 @@ void SceneShooting::Render()
 	if (gameState == STATE_FIND_GUN)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"Find the gun to start!", glm::vec3(1, 1, 0), 30.f, 90.f, 540.f);
+			"Find the gun!", glm::vec3(1, 1, 0), 30.f, 300.f, 540.f);
 
 		if (IsPlayerNearGun(2.5f))
-		{
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"[F] Pick up Gun", glm::vec3(1, 1, 1), 35.f, 660.f, 480.f);
-		}
+				"[F] Step up to the booth", glm::vec3(1, 1, 1), 30.f, 250.f, 490.f);
 	}
 
 	// ---- HUD: PLAYING STATE ----
@@ -738,22 +777,20 @@ void SceneShooting::Render()
 	if (gameState == STATE_WON)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"BOMB DEFUSED!", glm::vec3(0, 1, 0), 60.f, 560.f, 580.f);
+			"BOMB DEFUSED!", glm::vec3(0, 1, 0), 60.f, 200.f, 340.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"You saved the booth!", glm::vec3(1, 1, 1), 35.f, 620.f, 510.f);
-		RenderTextOnScreen(meshList[GEO_TEXT],
-			"[R] Return to Lobby", glm::vec3(1, 1, 0), 35.f, 620.f, 460.f);
+			"Head back to the lobby!", glm::vec3(1, 1, 1), 30.f, 200.f, 290.f);
 	}
 
 	// ---- LOSE SCREEN ----
 	if (gameState == STATE_LOST)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 60.f, 90.f, 580.f);
+			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 60.f, 180.f, 340.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"The booth is gone.", glm::vec3(1, 1, 1), 35.f, 90.f, 510.f);
+			"The booth is gone.", glm::vec3(1, 1, 1), 30.f, 230.f, 290.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"[R] Return to Lobby", glm::vec3(1, 1, 0), 35.f, 90.f, 460.f);
+			"[R] Try Again", glm::vec3(1, 1, 0), 35.f, 300.f, 250.f);
 	}
 
 }
@@ -961,46 +998,38 @@ void SceneShooting::Shoot()
 {
 	if (bulletsLeft <= 0) return;
 
-	// Find an inactive bullet in the pool
+	// Find inactive bullet slot
 	int slot = -1;
 	for (int i = 0; i < POOL_SIZE; ++i)
 	{
-		if (!bulletPool[i].active)
-		{
-			slot = i;
-			break;
-		}
+		if (!bulletPool[i].active) { slot = i; break; }
 	}
-	if (slot == -1) return;  // no available slot (shouldn't happen with 8 bullets)
+	if (slot == -1) return;
 
 	bulletsLeft--;
 	muzzleFlashTimer = 0.08f;
 
-	// Fire from camera position
+	// Fire from fixed shooting position (camera is locked here)
 	bulletPool[slot].active = true;
 	bulletPool[slot].physics.pos = Vector3(
-		camera.position.x,
-		camera.position.y,
-		camera.position.z
+		shootingPos.x,
+		shootingPos.y,
+		shootingPos.z
 	);
 
-	// Direction: camera forward vector (target - position), normalised
-	glm::vec3 forward = glm::normalize(camera.target - camera.position);
+	// Direction: from shooting position toward fixed target point on rail
+	// Use camera.target so the crosshair always matches where bullet goes
+	glm::vec3 forward = glm::normalize(shootingTarget - shootingPos);
 
-	// Bullet speed: 30 units/sec forward + gravity handled by accel
-	float bulletSpeed = 30.f;
+	float bulletSpeed = 80.f;  // fast enough to travel straight
 	bulletPool[slot].physics.vel = Vector3(
 		forward.x * bulletSpeed,
 		forward.y * bulletSpeed,
 		forward.z * bulletSpeed
 	);
 
-	// Reset accel to gravity
-	bulletPool[slot].physics.accel = Vector3(0.f, -9.8f, 0.f);
-
-	// Out of bullets and haven't hit all targets = lose
-	if (bulletsLeft <= 0 && targetsHit < NUM_TARGETS)
-		gameState = STATE_LOST;
+	// Reset accel – low gravity (set in Init, restore here just in case)
+	bulletPool[slot].physics.accel = Vector3(0.f, -2.0f, 0.f);
 }
 
 // --------------------------------------------------------------
@@ -1016,37 +1045,45 @@ void SceneShooting::ResetGame()
 	bombTimer = 120.0f;
 	gunPickedUp = false;
 	muzzleFlashTimer = 0.f;
+	playerLocked = false;
 
-	float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
-	float speeds[NUM_TARGETS] = { 2.5f, 3.5f, 2.0f, 4.0f, 3.0f };
-
+	// Reset targets
+	float speed = 3.0f;
 	for (int i = 0; i < NUM_TARGETS; ++i)
 	{
-		targets[i].physics.pos = Vector3(startPositions[i], 0.f, 0.f);
+		float startX = -6.f + (i * 3.f);   // -6, -3, 0, 3, 6
+		targets[i].physics.pos = Vector3(startX, 0.f, 0.f);
 		targets[i].physics.vel = Vector3(0.f, 0.f, 0.f);
 		targets[i].physics.accel = Vector3(0.f, 0.f, 0.f);
-		targets[i].speed = speeds[i];
+		targets[i].physics.mass = 1.f;
+		targets[i].physics.bounciness = 0.f;
+		targets[i].speed = speed;
+		targets[i].minX = -8.f;
+		targets[i].maxX = 8.f;
 		targets[i].isAlive = true;
 		targets[i].isFalling = false;
 	}
 
+	// Reset bullet pool
 	for (int i = 0; i < POOL_SIZE; ++i)
 	{
 		bulletPool[i].active = false;
 		bulletPool[i].physics.pos = Vector3(0.f, 0.f, 0.f);
 		bulletPool[i].physics.vel = Vector3(0.f, 0.f, 0.f);
-		bulletPool[i].physics.accel = Vector3(0.f, -9.8f, 0.f);
+		bulletPool[i].physics.accel = Vector3(0.f, -2.0f, 0.f);
+		bulletPool[i].physics.mass = 0.1f;
+		bulletPool[i].physics.bounciness = 0.f;
 	}
 
-    // Reset gun position
-    gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
+	// Reset gun
+	gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
 
-    // Reset camera
-    camera.Init(
-        glm::vec3(0.f, 2.1f, 8.f),
-        glm::vec3(0.f, 2.f,  0.f),
-        glm::vec3(0.f, 1.f,  0.f)
-    );
+	// Unlock camera, send player back to start
+	camera.Init(
+		glm::vec3(0.f, 2.1f, 8.f),
+		glm::vec3(0.f, 2.f, 0.f),
+		glm::vec3(0.f, 1.f, 0.f)
+	);
 }
 
 
@@ -1128,29 +1165,34 @@ void SceneShooting::HandleKeyPress()
 
 
 
-	// --- F key: pick up gun ---
+	// --- F key: step up to booth and start game ---
 	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		if (gameState == STATE_FIND_GUN && IsPlayerNearGun(2.5f))
 		{
 			gunPickedUp = true;
+			playerLocked = true;
+
+			// Snap camera to fixed shooting position
+			camera.position = shootingPos;
+			camera.target = shootingTarget;
+
 			gameState = STATE_PLAYING;
-			bombTimer = 120.0f;   // start the 2-minute countdown
+			bombTimer = 120.0f;
 		}
 	}
 
-	// --- R key: restart (only on win or lose screen) ---
+	// --- R key: restart at booth on lose ---
 	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
 	{
-		if (gameState == STATE_WON || gameState == STATE_LOST)
+		if (gameState == STATE_LOST)
 		{
-			// Mark game completed if won, then return to lobby
-			if (gameState == STATE_WON)
-				SceneManager::GetInstance()->gameCompleted[1] = true; // index 1 = shooting booth
-
-			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
+			ResetGame();  // resets everything, stays in SceneShooting
 		}
+
+		// On win, R is not needed – player walks freely back to lobby
 	}
+
 
 
 }

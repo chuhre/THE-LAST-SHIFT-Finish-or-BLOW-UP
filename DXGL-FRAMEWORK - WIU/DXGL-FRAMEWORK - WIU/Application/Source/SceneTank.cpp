@@ -93,7 +93,10 @@ void SceneTank::Init()
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
 	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
-	//meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(1.f, 1.f, 1.f), 10.f, 5.f, 0.5f);
+	meshList[GEO_PLANK] = MeshBuilder::GenerateRectangularPrism("Plank", glm::vec3(1.f, 1.f, 1.f), 10.f, 5.f, 0.5f);
+	meshList[GEO_BALL] = MeshBuilder::GenerateSphere("Ball", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
+	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 15.f, 1.0f, 1.0f);
+	meshList[GEO_PILLAR] = MeshBuilder::GenerateRectangularPrism("Pillar", glm::vec3(0.55f, 0.35f, 0.15f), 1.f, 5.f, 1.f);
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	// OBJ Models
@@ -108,6 +111,10 @@ void SceneTank::Init()
 	meshList[GEO_BOX2]->textureID = LoadTGA("Images//box.tga");
 	meshList[GEO_BOX3] = MeshBuilder::GenerateOBJ("Box3", "Models//box.obj");
 	meshList[GEO_BOX3]->textureID = LoadTGA("Images//box.tga");
+	meshList[GEO_BOX4] = MeshBuilder::GenerateOBJ("Box4", "Models//box.obj");
+	meshList[GEO_BOX4]->textureID = LoadTGA("Images//box.tga");
+	meshList[GEO_CABINET] = MeshBuilder::GenerateOBJ("Cabinet", "Models//iron_cabinet.obj");
+	meshList[GEO_CABINET]->textureID = LoadTGA("Images//iron_cabinet_MT_BaseColor.1002.tga");
 
 	// Environment
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism(
@@ -285,7 +292,7 @@ void SceneTank::Render()
 	// render tests
 
 	modelStack.PushMatrix();                        // >>> BOOTH ROOT
-	modelStack.Translate(9.f, 0.f, 0.f);           // booth world origin
+	modelStack.Translate(0.f, 0.f, 0.f);           // booth world origin
 
 	// ---- FLOOR ----
 	modelStack.PushMatrix();                    // >>> Floor
@@ -342,20 +349,45 @@ void SceneTank::Render()
 	meshList[GEO_TANK]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 	meshList[GEO_TANK]->material.kShininess = 5.0f;
 
+	// plank
+	modelStack.PushMatrix();
+	modelStack.Translate(2.6f, 1.f, 0.f);
+	modelStack.Rotate(90.f, 1.f, 0.f, 0.f);
+	modelStack.Scale(0.15f, 0.15f, 0.15f);
+	
+	meshList[GEO_PLANK]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_PLANK]->material.kDiffuse = glm::vec3(0.6f, 0.4f, 0.2f);
+	meshList[GEO_PLANK]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_PLANK]->material.kShininess = 2.0f;
+
+	RenderMesh(meshList[GEO_PLANK], true);
+	modelStack.PopMatrix();
 	RenderMesh(meshList[GEO_TANK], true);
+	modelStack.PopMatrix();
+
+	// target stand
+	modelStack.PushMatrix();
+	modelStack.Translate(2.5f, 1.f, 0.f);
+
+	meshList[GEO_PILLAR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
+	meshList[GEO_PILLAR]->material.kDiffuse = glm::vec3(0.6f, 0.4f, 0.2f);
+	meshList[GEO_PILLAR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_PILLAR]->material.kShininess = 5.0f;
+	
+	RenderMesh(meshList[GEO_PILLAR], true);
 	modelStack.PopMatrix();
 
 	// target
 	modelStack.PushMatrix();
-	modelStack.Translate(2.5f, 3.f, 0.f);
+	modelStack.Translate(3.5f, 3.f, 0.f);
 	modelStack.Rotate(90.0f, 0, 1, 0);
 	modelStack.Rotate(270.0f, 1, 0, 0);
 	modelStack.Scale(1.5f, 1.5f, 1.5f);
 
-	meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
-	meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.0f, 0.0f, 0.5f);
-	meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-	meshList[GEO_TARGET]->material.kShininess = 5.0f;
+	meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.2f, 0.1f, 0.1f);
+	meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.9f, 0.3f, 0.3f);
+	meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
+	meshList[GEO_TARGET]->material.kShininess = 2.0f;
 
 	RenderMesh(meshList[GEO_TARGET], true);
 	modelStack.PopMatrix();
@@ -364,6 +396,7 @@ void SceneTank::Render()
 	modelStack.PushMatrix();
 	modelStack.Translate(-2.f, 0.f, 0.f);
 	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	modelStack.Rotate(2.f, 1.f, 0.f, 0.f);
 	modelStack.Scale(0.01f, 0.01f, 0.01f);
 
 	meshList[GEO_LADDER]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
@@ -372,6 +405,31 @@ void SceneTank::Render()
 	meshList[GEO_LADDER]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_LADDER], true);
+	modelStack.PopMatrix();
+
+	// counter
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.5f, 3.f);
+
+	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	meshList[GEO_COUNTER]->material.kShininess = 8.f;
+
+	RenderMesh(meshList[GEO_COUNTER], true);
+	modelStack.PopMatrix();
+
+	// balls
+	modelStack.PushMatrix();
+	modelStack.Translate(1.f, 1.1f, 3.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
+
+	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.25f, 0.22f, 0.18f);
+	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.9f, 0.85f, 0.7f);   // off-white leather
+	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.15f, 0.15f, 0.15f); // slightly shiny
+	meshList[GEO_BALL]->material.kShininess = 8.0f;
+	
+	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
 
 	// box
@@ -413,6 +471,34 @@ void SceneTank::Render()
 	meshList[GEO_BOX3]->material.kShininess = 5.0f;
 
 	RenderMesh(meshList[GEO_BOX3], true);
+	modelStack.PopMatrix();
+
+	// box 4
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.9f, 0.5f, -4.0f);
+	modelStack.Rotate(50.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 0.3f, 0.3f);
+
+	meshList[GEO_BOX4]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
+	meshList[GEO_BOX4]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX4]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_BOX4]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_BOX4], true);
+	modelStack.PopMatrix();
+
+	// cabinet
+	modelStack.PushMatrix();
+	modelStack.Translate(8.9f, 0.f, -5.f);
+	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(2.f, 2.f, 2.f);
+	
+	meshList[GEO_CABINET]->material.kAmbient = glm::vec3(0.25f, 0.25f, 0.25f);
+	meshList[GEO_CABINET]->material.kDiffuse = glm::vec3(0.55f, 0.55f, 0.55f);
+	meshList[GEO_CABINET]->material.kSpecular = glm::vec3(0.2f, 0.2f, 0.2f);
+	meshList[GEO_CABINET]->material.kShininess = 8.f;
+
+	RenderMesh(meshList[GEO_CABINET], true);
 	modelStack.PopMatrix();
 
 	modelStack.PopMatrix();
