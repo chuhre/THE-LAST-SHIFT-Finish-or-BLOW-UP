@@ -86,21 +86,25 @@ public:
 	};
 
 
-	enum GameState
+	/*enum GameState
 	{
 		GAME_NOT_STARTED = 0,
 		GAME_PLAYING,
 		GAME_WON,
 		GAME_LOST
-	};
+	};*/
 
-	enum CustomerState
-	{
-		CUSTOMER_NONE = 0,
-		CUSTOMER_WAITING,
-		CUSTOMER_ORDERED,
-		CUSTOMER_IS_MONSTER
-	};
+	enum GameState { STATE_FIND_HOOK, STATE_PLAYING, STATE_WON };
+	GameState gameState = STATE_FIND_HOOK;
+
+	bool hookPickedUp = false;
+	glm::vec3 hookWorldPos = glm::vec3(4.f, 0.5f, 5.f); // hook lying on floor
+
+	// Scoring
+	int ducksPickedUp = 0;
+	static const int MAX_DUCKS = 3;
+	float catchTimer = 0.f;   // flash "GOT ONE!"
+	
 
 
 	SceneDucks();
@@ -138,6 +142,8 @@ private:
 	float duckRadius = 12.f;  // radius of the circle
 	float duckSpeed = 0.3f;   // radians per second
 
+	
+
 
 	// ANIMATIONS/INTERACTIONS
 	// door
@@ -164,23 +170,15 @@ private:
 
 	bool IsPlayerNearShutterButton(float radius);
 
+	//HOOK
+	bool IsPlayerNearHook(float radius);
 
 
-	// Game state
-	GameState gameState;
-	CustomerState customerState;
+	//// Game state
+	//GameState gameState;
+	//CustomerState customerState;
 
-	int playerLives;
-	int customersServed;  // Total correct serves to win
-
-	glm::vec3 npcPosition;
-	bool isMonster;        // Is current customer a monster?
-	bool hasTaco;         // Is player holding taco?
-	float customerTimer;  // Timer for customer events
-
-	bool showNPC;         // Simple flag to show/hide NPC
-
-
+	
 
 	// Collision detection
 	glm::vec3 playerSize;
