@@ -154,8 +154,8 @@ void SceneCans::Init()
 	enableLight = true;
 
 	//initialise door 
-	door[0] = { glm::vec3(1.f, -0.1f, 14.5f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
-	door[1] = { glm::vec3(-10.f, -0.1f, 6.25f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+	door[0] = { glm::vec3(1.f, 2.f, 14.5f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+	door[1] = { glm::vec3(-10.f, 2.f, 6.25f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
 		
 	//GAME SETUP
 	InitialiseCans();
@@ -413,7 +413,7 @@ void SceneCans::Render()
 
 	//environment
 	modelStack.PushMatrix();                     
-	modelStack.Translate(0.f, -2.f, 0.f);          
+	modelStack.Translate(0.f, 0.f, 0.f);          
 
 	modelStack.PushMatrix();                  
 	modelStack.Translate(-12.f, 0.f, 3.5f);
@@ -527,7 +527,7 @@ void SceneCans::Render()
 		modelStack.PushMatrix();
 		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
 		modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
-		modelStack.Scale(20.f, 8.f, 8.f);
+		modelStack.Scale(15.f, 6.f, 6.f);
 		modelStack.Rotate(0, renderBall, 0, 0);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -538,7 +538,7 @@ void SceneCans::Render()
 		//render 2nd ball
 		modelStack.PushMatrix();
 		modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
-		modelStack.Scale(20.f, 8.f, 8.f);
+		modelStack.Scale(15.f, 6.f, 6.f);
 		modelStack.Rotate(0, renderBall, 0, 0);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -552,7 +552,7 @@ void SceneCans::Render()
 	//render missing ball
 	modelStack.PushMatrix();
 	modelStack.Translate(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
-	modelStack.Scale(20.f, 20.f, 20.f);
+	modelStack.Scale(17.f, 17.f, 17.f);
 	modelStack.Rotate(0, renderBall, 0, 0);
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -583,7 +583,7 @@ void SceneCans::Render()
 		modelStack.PushMatrix();
 		modelStack.LoadIdentity();
 		modelStack.LoadMatrix(cameraBasis);
-		modelStack.Scale(18.f, 18.f, 18.f);
+		modelStack.Scale(16.f, 16.f, 16.f);
 		modelStack.Rotate(0, holdBall, 0, 0);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -598,7 +598,7 @@ void SceneCans::Render()
 	{
 		modelStack.PushMatrix();
 		modelStack.Translate(0.f, 0.f, -4.f);
-		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		modelStack.Scale(1.15f, 1.15f, 1.15f);
 		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
 		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
@@ -615,7 +615,7 @@ void SceneCans::Render()
 			if (m_cans[i].knocked)
 				modelStack.Rotate(90.f, 1.f, 0.f, 0.f);   // tip over
 
-			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			modelStack.Scale(0.25f, 0.25f, 0.25f);
 			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -632,7 +632,7 @@ void SceneCans::Render()
 		//left
 		modelStack.PushMatrix();
 		modelStack.Translate(-7.f, 0.f, -4.f);
-		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		modelStack.Scale(1.f, 1.f, 1.f);
 		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
 		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
@@ -644,7 +644,7 @@ void SceneCans::Render()
 		{
 			modelStack.PushMatrix();
 			modelStack.Translate(m_staticCanPos[i].x,m_staticCanPos[i].y + 0.75f,m_staticCanPos[i].z - 1.5f);
-			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			modelStack.Scale(0.25f, 0.25f, 0.25f);
 			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -657,7 +657,7 @@ void SceneCans::Render()
 		//right
 		modelStack.PushMatrix();
 		modelStack.Translate(7.f, 0.f, -4.f);
-		modelStack.Scale(1.25f, 1.25f, 1.25f);
+		modelStack.Scale(1.f, 1.f, 1.f);
 		meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 		meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
 		meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
@@ -669,7 +669,7 @@ void SceneCans::Render()
 		{
 			modelStack.PushMatrix();
 			modelStack.Translate(m_staticCanPos[i].x, m_staticCanPos[i].y + 0.75f, m_staticCanPos[i].z - 1.5f);
-			modelStack.Scale(0.3f, 0.3f, 0.3f);
+			modelStack.Scale(0.25f, 0.25f, 0.25f);
 			meshList[GEO_CAN]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_CAN]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 			meshList[GEO_CAN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -1083,74 +1083,57 @@ void SceneCans::BuildCollisionBoxes()
 
 	// Floor
 	AABB floor;
-	floor.min = glm::vec3(-10.f, -0.75f, -7.5f);
-	floor.max = glm::vec3(10.f, -0.3f, 14.5f);
+	floor.min = glm::vec3(-35.f, 0.f, -7.5f);
+	floor.max = glm::vec3(10.f, 1.5f, 14.5f);
 	collisionBoxes.push_back(floor);
 
-	/*AABB ceiling;
-	ceiling.min = glm::vec3(-10.f, -2.f, -7.5f);
-	ceiling.max = glm::vec3(10.f, -0.1f, 14.5f);
-	collisionBoxes.push_back(ceiling);*/
+	// Front wall
+	AABB frontWall;
+	frontWall.min = glm::vec3(-10.f, -0.75f, -7.6f);
+	frontWall.max = glm::vec3(10.f, 8.f, -7.4f);
+	collisionBoxes.push_back(frontWall);
 
-	//// Front wall
-	//AABB frontWall;
-	//frontWall.min = glm::vec3(-10.f, -2.f, -7.6f);
-	//frontWall.max = glm::vec3(10.f, 6.f, -7.4f);
-	//collisionBoxes.push_back(frontWall);
+	// Right wall 
+	AABB rightWall;
+	rightWall.min = glm::vec3(9.5f, -0.75f, -7.5f);
+	rightWall.max = glm::vec3(10.f, 8.f, 14.5f);
+	collisionBoxes.push_back(rightWall);
 
-	//// Right wall 
-	//AABB rightWall;
-	//rightWall.min = glm::vec3(9.7f, -2.f, -7.5f);
-	//rightWall.max = glm::vec3(10.f, 6.f, 14.5f);
-	//collisionBoxes.push_back(rightWall);
-
-	//// Left wall 
-	//AABB leftWallFront;
-	//leftWallFront.min = glm::vec3(-10.f, -2.f, -7.5f);
-	//leftWallFront.max = glm::vec3(-9.7f, 6.f, 4.5f);  // up to door start
-	//collisionBoxes.push_back(leftWallFront);
+	// Left wall 
+	AABB leftWallFront;
+	leftWallFront.min = glm::vec3(-10.f, -0.75f, -7.5f);
+	leftWallFront.max = glm::vec3(-9.5f, 8.f, 4.25f);  
+	collisionBoxes.push_back(leftWallFront);
 
 
-	//AABB leftWallBack;
-	//leftWallBack.min = glm::vec3(-10.f, -2.f, 8.f);    // past door end
-	//leftWallBack.max = glm::vec3(-9.7f, 6.f, 14.5f);
-	//collisionBoxes.push_back(leftWallBack);
+	AABB leftWallBack;
+	leftWallBack.min = glm::vec3(-10.f, -0.75f, 6.25f);   
+	leftWallBack.max = glm::vec3(-9.5f, 8.f, 14.75f);
+	collisionBoxes.push_back(leftWallBack);
 
-	//// wall above side door
-	//AABB leftWallTop;  
-	//leftWallTop.min = glm::vec3(-10.f, 3.65f, 4.5f);
-	//leftWallTop.max = glm::vec3(-9.7f, 6.f, 8.f);
-	//collisionBoxes.push_back(leftWallTop);
+	// Back wall 
+	AABB backWallLeft;
+	backWallLeft.min = glm::vec3(1.f, -0.75f, 14.3f);
+	backWallLeft.max = glm::vec3(10.f, 8.f, 14.6f);
+	collisionBoxes.push_back(backWallLeft);
 
-	//// Back wall 
-	//AABB backWallLeft;
-	//backWallLeft.min = glm::vec3(-10.f, -2.f, 14.3f);
-	//backWallLeft.max = glm::vec3(-0.f, 6.f, 14.6f);
-	//collisionBoxes.push_back(backWallLeft);
+	AABB backWallRight;
+	backWallRight.min = glm::vec3(-10.f, -0.75f, 14.3f);
+	backWallRight.max = glm::vec3(-1.f, 8.f, 14.8f);
+	collisionBoxes.push_back(backWallRight);
 
-	//AABB backWallRight;
-	//backWallRight.min = glm::vec3(3.f, -2.f, 14.3f);
-	//backWallRight.max = glm::vec3(10.f, 6.f, 14.6f);
-	//collisionBoxes.push_back(backWallRight);
-
-	//// wall above main door
-	//AABB backWallTop;  
-	//backWallTop.min = glm::vec3(-0.f, 3.65f, 14.3f);
-	//backWallTop.max = glm::vec3(3.f, 6.f, 14.6f);
-	//collisionBoxes.push_back(backWallTop);
-
-	//// Counter 
-	//AABB counter;
-	//counter.min = glm::vec3(-10.f, -2.f, 1.0f);
-	//counter.max = glm::vec3(10.f, 1.5f, 2.5f);
-	//collisionBoxes.push_back(counter);
+	// Counter 
+	AABB counter;
+	counter.min = glm::vec3(-10.f, -2.f, 1.0f);
+	counter.max = glm::vec3(10.f, 2.f, 2.5f);
+	collisionBoxes.push_back(counter);
 }
 
 void SceneCans::InitialiseCans()
 {
 	const float counterTopY = 1.1f;
-	const float canH = 0.8f;   // visual height of one can (scaled)
-	const float canSpacing = 0.7f;
+	const float canH = 0.65f;   // visual height of one can (scaled)
+	const float canSpacing = 0.65f;
 
 	//interactive cans
 	// Bottom row — 3 cans
@@ -1191,9 +1174,9 @@ void SceneCans::InitialiseBalls()
 	m_isAiming = false;
 
 	//initialise balls pos
-	m_balls[0].ball.pos = Vector3(-0.25f, 0.7f, 0.f);
-	m_balls[1].ball.pos = Vector3(0.5f, 0.7f, 0.f);
-	m_balls[2].ball.pos = Vector3(-15.75f, 1.f, 10.f);
+	m_balls[0].ball.pos = Vector3(-0.25f, 0.61f, 0.f);
+	m_balls[1].ball.pos = Vector3(0.4f, 0.61f, 0.f);
+	m_balls[2].ball.pos = Vector3(-15.75f, 0.75f, 10.f);
 
 }
 
@@ -1282,7 +1265,7 @@ void SceneCans::DrawRayCastLine()
 	glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
 
 	// Start the line just in front of the camera (0.5f offset)
-	glm::vec3 lineStart = camera.position + rayDir * 0.1f;
+	glm::vec3 lineStart = camera.position + rayDir * 0.5f;
 
 	glm::vec3 lineEnd = camera.position + rayDir * 3.f;
 
@@ -1319,7 +1302,7 @@ void SceneCans::RenderHUD()
 
 	if (!ballCollected)
 	{
-		RenderTextOnScreen(meshList[GEO_TEXT], "Find the mising ball to start!", glm::vec3(1, 1, 0.5), 35, 20, 575);
+		RenderTextOnScreen(meshList[GEO_TEXT], "Find the missing ball to start!", glm::vec3(1, 1, 0.5), 35, 20, 575);
 	}
 	else if (gameState == GAME_PLAYING)
 	{
