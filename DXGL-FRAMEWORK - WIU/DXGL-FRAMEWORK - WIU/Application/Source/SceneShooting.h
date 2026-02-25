@@ -168,6 +168,7 @@ private:
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
 	bool showInteractPrompt;
+	bool showLockedPrompt;
 
 	// ----- GL handles -------------------------------------
 	unsigned m_vertexArrayID;

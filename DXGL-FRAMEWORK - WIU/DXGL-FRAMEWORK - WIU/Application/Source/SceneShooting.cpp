@@ -79,7 +79,7 @@ void SceneShooting::Init()
 	// Initialise camera properties
 	//camera.Init(45.f, 45.f, 10.f);
 	camera.Init(
-		glm::vec3(0, 2.1, 10),		// position
+		glm::vec3(0, 2.1, 6),		// position
 		glm::vec3(0, 2, 0),		// target
 		glm::vec3(0, 1.0f, 0)		// up
 	);
@@ -178,21 +178,20 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 	fps = 0.f;
 	playerLocked = false;
 	atBooth = false;
-	boothEntryPos = glm::vec3(0.f, 2.1f, 6.f);  // front of counter
+	boothEntryPos = glm::vec3(0.f, 2.1f, 2.f);  // front of counter
 
 	// Fixed shooting position – centred behind counter
-	shootingPos = glm::vec3(0.f, 2.1f, 6.f);
+	shootingPos = glm::vec3(0.f, 2.1f, 5.f);
 	shootingTarget = glm::vec3(0.f, 3.5f, -5.f);  // looking at rail
 
 	// Gun lying on the floor – to the right side, easy to spot
-	gunWorldPos = glm::vec3(7.f, 0.6f, 7.f);
+	gunWorldPos = glm::vec3(7.f, 0.6f, 5.f);
 
 	// ---------- Target setup ----------
 	// All positions are LOCAL to the rail (rail is at world Y=3.5, Z=-5)
 	// X is the only axis that changes during looping movement
 	// Evenly spaced 3 units apart
-	float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
-	float speeds[NUM_TARGETS] = { 2.5f,  3.5f, 2.0f, 4.0f, 3.0f };
+	//float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
 	float speed = 3.0f;  // same speed for all targets
 
 	for (int i = 0; i < NUM_TARGETS; ++i)
@@ -287,8 +286,11 @@ void SceneShooting::Update(double dt)
 	if (playerLocked)
 	{
 		// Lock camera to fixed shooting position
-		camera.position = shootingPos;
-		camera.target = shootingTarget;
+		/*camera.position = shootingPos;
+		camera.target = shootingTarget;*/
+
+		camera.Update(dt);                  // allow mouse look
+		camera.position = shootingPos;      // but snap position back every frame
 	}
 	else
 	{
@@ -309,21 +311,21 @@ void SceneShooting::Update(double dt)
 
 
 	// === ANIMATION/INTERACTIONS ====
-	//Door interaction
+	// Door interaction
 	showInteractPrompt = false;
-	if (door[0].IsPlayerNear(camera.position, 1.5f))
+	showLockedPrompt = false;
+
+	if (door[0].IsPlayerNear(camera.position, 2.5f))
 	{
 		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_SHOOTING))
 			showInteractPrompt = true;
-
 		else
-			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 0, 50);
+			showLockedPrompt = true;  // game not won yet
 	}
 	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		door[0].Open();
 	}
-
 	if (door[0].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
 	{
 		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
@@ -420,10 +422,23 @@ void SceneShooting::Update(double dt)
 					bulletPool[i].active = false;
 
 					if (targetsHit >= NUM_TARGETS)
+					{
 						gameState = STATE_WON;
-					SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = true;
-
-					break;
+						SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = true;
+						// Clear all remaining bullets
+						for (int k = 0; k < POOL_SIZE; ++k)
+							bulletPool[k].active = false;
+						// Remove all remaining targets immediately
+						for (int k = 0; k < NUM_TARGETS; ++k)
+						{
+							targets[k].isAlive = false;
+							targets[k].isFalling = false;
+						}
+					}
+					else
+					{
+						SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = false;
+					}
 				}
 			}
 		}
@@ -450,7 +465,9 @@ void SceneShooting::Update(double dt)
 	if (gameState == STATE_WON)
 	{
 		playerLocked = false;
+		glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL); // show cursor again
 		// camera.Update(dt) already called above since playerLocked = false
+		return;
 	}
 
 	// --- STATE_LOST: camera stays locked (at booth) ---
@@ -768,8 +785,10 @@ void SceneShooting::Render()
 	{
 		modelStack.PushMatrix();                    // >>> GUN
 		modelStack.Translate(gunWorldPos.x, gunWorldPos.y, gunWorldPos.z);
-		modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+		modelStack.Rotate(-90.f, 0.f, 0.f, 1.f);	// lay flat
+		modelStack.Rotate(-20.f, 0.f, 1.f, 0.f);   // fix tilt/spin to face correct direction
 		modelStack.Scale(0.02f, 0.02f, 0.02f);
+
 		meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.15f, 0.1f, 0.1f);
 		meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.6f, 0.55f, 0.5f);
 		meshList[GEO_GUN]->material.kSpecular = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -778,7 +797,42 @@ void SceneShooting::Render()
 		modelStack.PopMatrix();                     // <<< GUN
 	}
 
+	// Gun held in hand (only after pickup) 
+	if (gunPickedUp)
+	{
+		glm::vec3 view = glm::normalize(camera.target - camera.position);
+		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+		glm::vec3 up = glm::normalize(glm::cross(right, view));
 
+		glm::vec3 gunPos = camera.position
+			+ view * 1.1f    // how far in front of camera
+			+ right * 0.9f    // offset to the right (like holding in right hand)
+			+ up * (-0.2f); // offset downward
+
+		glClear(GL_DEPTH_BUFFER_BIT);
+
+		glm::mat4 cameraBasis = glm::mat4(
+			glm::vec4(right, 0.f),
+			glm::vec4(up, 0.f),
+			glm::vec4(-view, 0.f),
+			glm::vec4(gunPos, 1.f)
+		);
+
+		modelStack.PushMatrix();
+		modelStack.LoadIdentity();
+		modelStack.LoadMatrix(cameraBasis);
+		modelStack.Scale(0.02f, 0.02f, 0.02f);
+		modelStack.Rotate(180.f, 0.f, 1.f, 0.f); // flip to face forward
+		modelStack.Rotate(-25.f, 0.f, 0.f, 1.f);	// tilt up slightly for better visibility
+		modelStack.Rotate(-25.f, 0.f, 1.f, 0.f);	// fix spin to face correct direction
+
+		meshList[GEO_GUN]->material.kAmbient = glm::vec3(0.3f, 0.3f, 0.3f);
+		meshList[GEO_GUN]->material.kDiffuse = glm::vec3(0.6f, 0.6f, 0.6f);
+		meshList[GEO_GUN]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		meshList[GEO_GUN]->material.kShininess = 32.f;
+		RenderMesh(meshList[GEO_GUN], true);
+		modelStack.PopMatrix();
+	}
 
 
 	// ---- BULLETS (outside booth root, independent world objects) ----
@@ -812,6 +866,12 @@ void SceneShooting::Render()
 	{
 		RenderMeshOnScreen(meshList[GEO_GUI], 960.f, 540.f, 1920.f, 1080.f);
 	}
+
+	// Door interaction prompts
+	if (showInteractPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to exit", glm::vec3(1.f, 1.f, 1.f), 40, 0, 50);
+	else if (showLockedPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 0, 50);
 
 	// ---- HUD: FIND GUN STATE ----
 	if (gameState == STATE_FIND_GUN)
@@ -1086,7 +1146,10 @@ void SceneShooting::Shoot()
 
 	// Direction: from shooting position toward fixed target point on rail
 	// Use camera.target so the crosshair always matches where bullet goes
-	glm::vec3 forward = glm::normalize(shootingTarget - shootingPos);
+	//glm::vec3 forward = glm::normalize(shootingTarget - shootingPos);
+
+	// Direction: fire toward where the player is actually looking
+	glm::vec3 forward = glm::normalize(camera.target - camera.position);
 
 	float bulletSpeed = 80.f;  // fast enough to travel straight
 	bulletPool[slot].physics.vel = Vector3(
@@ -1111,12 +1174,22 @@ void SceneShooting::ResetGame()
 	targetsHit = 0;
 	bombTimer = 120.0f;
 	gunPickedUp = false;
+	fps = 0.f;
 	muzzleFlashTimer = 0.f;
 	playerLocked = false;
+	glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	atBooth = false;
-	boothEntryPos = glm::vec3(0.f, 2.1f, 6.f);  // front of counter
+	boothEntryPos = glm::vec3(0.f, 2.1f, 2.f);  // front of counter
+
+	// Fixed shooting position - centred behind counter (matches Init)
+	shootingPos = glm::vec3(0.f, 2.1f, 5.f);
+	shootingTarget = glm::vec3(0.f, 3.5f, -5.f);  // looking at rail
+
+	// Reset gun (matches Init position)
+	gunWorldPos = glm::vec3(7.f, 0.6f, 5.f);
 
 	// Reset targets
+	//float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
 	float speed = 3.0f;
 	for (int i = 0; i < NUM_TARGETS; ++i)
 	{
@@ -1144,12 +1217,9 @@ void SceneShooting::ResetGame()
 		bulletPool[i].physics.bounciness = 0.f;
 	}
 
-	// Reset gun
-	gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
-
 	// Unlock camera, send player back to start
 	camera.Init(
-		glm::vec3(0.f, 2.1f, 8.f),
+		glm::vec3(0.f, 2.1f, 6.f),
 		glm::vec3(0.f, 2.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f)
 	);
@@ -1248,6 +1318,7 @@ void SceneShooting::HandleKeyPress()
 		{
 			atBooth = true;
 			playerLocked = true;
+			glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); // hide cursor
 			camera.Init(shootingPos, shootingTarget, glm::vec3(0.f, 1.f, 0.f));
 			gameState = STATE_PLAYING;
 			bombTimer = 120.0f;
