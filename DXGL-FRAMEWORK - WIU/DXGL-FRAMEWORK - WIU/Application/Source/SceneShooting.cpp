@@ -149,6 +149,7 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
     12, 0.12f, 18.f);
 
 // Door
+//SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = false;
 meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
 
 
@@ -310,13 +311,13 @@ void SceneShooting::Update(double dt)
 	// === ANIMATION/INTERACTIONS ====
 	//Door interaction
 	showInteractPrompt = false;
-	if (door[0].IsPlayerNear(camera.position, 2.5f))
+	if (door[0].IsPlayerNear(camera.position, 1.5f))
 	{
 		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_SHOOTING))
 			showInteractPrompt = true;
 
 		else
-			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
+			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 0, 50);
 	}
 	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
@@ -327,7 +328,7 @@ void SceneShooting::Update(double dt)
 	{
 		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
 		door[0].Close();
-		showInteractPrompt = false;
+		showInteractPrompt = true;
 	}
 
 	
@@ -420,6 +421,7 @@ void SceneShooting::Update(double dt)
 
 					if (targetsHit >= NUM_TARGETS)
 						gameState = STATE_WON;
+					SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = true;
 
 					break;
 				}
