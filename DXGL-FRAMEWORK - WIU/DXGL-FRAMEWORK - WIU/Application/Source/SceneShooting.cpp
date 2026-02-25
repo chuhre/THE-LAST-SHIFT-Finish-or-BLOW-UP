@@ -423,10 +423,23 @@ void SceneShooting::Update(double dt)
 					bulletPool[i].active = false;
 
 					if (targetsHit >= NUM_TARGETS)
+					{
 						gameState = STATE_WON;
-					SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = true;
-
-					break;
+						SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = true;
+						// Clear all remaining bullets
+						for (int k = 0; k < POOL_SIZE; ++k)
+							bulletPool[k].active = false;
+						// Remove all remaining targets immediately
+						for (int k = 0; k < NUM_TARGETS; ++k)
+						{
+							targets[k].isAlive = false;
+							targets[k].isFalling = false;
+						}
+					}
+					else
+					{
+						SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] = false;
+					}
 				}
 			}
 		}
@@ -455,6 +468,7 @@ void SceneShooting::Update(double dt)
 		playerLocked = false;
 		glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL); // show cursor again
 		// camera.Update(dt) already called above since playerLocked = false
+		return;
 	}
 
 	// --- STATE_LOST: camera stays locked (at booth) ---
