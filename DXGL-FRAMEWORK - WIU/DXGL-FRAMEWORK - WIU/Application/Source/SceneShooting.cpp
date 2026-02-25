@@ -191,8 +191,7 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 	// All positions are LOCAL to the rail (rail is at world Y=3.5, Z=-5)
 	// X is the only axis that changes during looping movement
 	// Evenly spaced 3 units apart
-	float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
-	float speeds[NUM_TARGETS] = { 2.5f,  3.5f, 2.0f, 4.0f, 3.0f };
+	//float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
 	float speed = 3.0f;  // same speed for all targets
 
 	for (int i = 0; i < NUM_TARGETS; ++i)
@@ -1175,13 +1174,22 @@ void SceneShooting::ResetGame()
 	targetsHit = 0;
 	bombTimer = 120.0f;
 	gunPickedUp = false;
+	fps = 0.f;
 	muzzleFlashTimer = 0.f;
 	playerLocked = false;
 	glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	atBooth = false;
 	boothEntryPos = glm::vec3(0.f, 2.1f, 2.f);  // front of counter
 
+	// Fixed shooting position - centred behind counter (matches Init)
+	shootingPos = glm::vec3(0.f, 2.1f, 5.f);
+	shootingTarget = glm::vec3(0.f, 3.5f, -5.f);  // looking at rail
+
+	// Reset gun (matches Init position)
+	gunWorldPos = glm::vec3(7.f, 0.6f, 5.f);
+
 	// Reset targets
+	//float startPositions[NUM_TARGETS] = { -6.f, -3.f, 0.f, 3.f, 6.f };
 	float speed = 3.0f;
 	for (int i = 0; i < NUM_TARGETS; ++i)
 	{
@@ -1209,12 +1217,9 @@ void SceneShooting::ResetGame()
 		bulletPool[i].physics.bounciness = 0.f;
 	}
 
-	// Reset gun
-	gunWorldPos = glm::vec3(7.f, 0.3f, 7.f);
-
 	// Unlock camera, send player back to start
 	camera.Init(
-		glm::vec3(0.f, 2.1f, 8.f),
+		glm::vec3(0.f, 2.1f, 6.f),
 		glm::vec3(0.f, 2.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f)
 	);
