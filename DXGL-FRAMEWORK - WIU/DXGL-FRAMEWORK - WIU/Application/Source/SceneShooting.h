@@ -11,6 +11,7 @@
 #include "PhysicsObject.h"
 #include "CollisionDetection.h"
 #include "Door.h"
+#include "SceneManager.h"
 
 class SceneShooting : public Scene
 {
