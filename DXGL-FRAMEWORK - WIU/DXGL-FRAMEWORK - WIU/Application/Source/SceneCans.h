@@ -149,8 +149,11 @@ private:
 	glm::vec3 m_savedCamTarget;
 	glm::vec3 m_savedCamUp;
 
-	const glm::vec3 AIM_CAM_POS = glm::vec3(7.7f, 1.88f, -0.7f);
-	const glm::vec3 AIM_CAM_TARGET = glm::vec3(6.7f, 1.9f, -0.8f);
+	const glm::vec3 AIM_CAM_POS = glm::vec3(-8.f, 2.5f, -2.f);
+	const glm::vec3 AIM_CAM_TARGET = glm::vec3(0.f, 1.5f, -4.f);
+
+	// Ball launches from the left side
+	const glm::vec3 LAUNCH_POS = glm::vec3(0.f, 3.f, 7.f);
 
 	MatrixStack modelStack, viewStack, projectionStack;
 
@@ -205,9 +208,17 @@ private:
 	void LaunchBall();
 	void ResetGame();
 
+	//aim line
+	float m_aimYaw = 180.f;   // horizontal aim angle (degrees)
+	float m_aimPitch = 20.f;    // vertical aim angle (degrees)
+	float m_aimZOffset = 0.f;   // which can to target along Z axis
+	glm::vec3 m_aimDir;         // computed aim direction
+	glm::vec3 m_dynamicAimTarget; // where the aim camera looks
+	void DrawAimLine();
+
+
 	//helpers
 	void DrawRayCastLine();
-	void DrawAimLine();
 	void RenderHUD();
 
 

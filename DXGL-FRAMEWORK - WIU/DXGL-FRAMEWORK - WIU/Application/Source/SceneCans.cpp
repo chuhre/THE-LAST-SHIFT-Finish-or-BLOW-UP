@@ -1,4 +1,4 @@
-#include "SceneCans.h"
+﻿#include "SceneCans.h"
 #include "GL\glew.h"
 
 // GLM Headers
@@ -119,7 +119,7 @@ void SceneCans::Init()
 	meshList[GEO_TABLE]->textureID = LoadTGA("Images//table.tga");
 
 
-	// In Init() � change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
+	// In Init() — change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
@@ -328,8 +328,16 @@ void SceneCans::Update(double dt)
 
 			// Snap to aiming position
 			camera.position = AIM_CAM_POS;
-			camera.target = AIM_CAM_TARGET;
 			camera.up = glm::vec3(0.f, 1.f, 0.f);
+
+			// Reset aim to point roughly at the cans
+			m_aimPitch = 30.f;
+			m_aimZOffset = 0.f;
+			m_aimDir = glm::normalize(glm::vec3(
+				cos(glm::radians(m_aimPitch)), sin(glm::radians(m_aimPitch)), 0.f
+			));
+			m_dynamicAimTarget = AIM_CAM_POS + glm::vec3(6.f, 1.5f, 0.f);
+			camera.target = m_dynamicAimTarget;
 
 			m_isAiming = true;
 		}
@@ -567,11 +575,24 @@ void SceneCans::Render()
 		int holdBall = 1;
 		if (m_noOfBalls == 0) holdBall = 0;
 
-		glm::vec3 view = glm::normalize(camera.target - camera.position);
-		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
-		glm::vec3 up = glm::normalize(glm::cross(right, view));
-		glm::vec3 ballPos = camera.position + view * 1.5f + right * 0.5f + up * (-0.5f);
+		glm::vec3 view, right, up, ballPos;
 
+		if (m_isAiming)
+		{
+			// Lock ball to bottom-left of aim camera view
+			view = glm::normalize(AIM_CAM_TARGET - AIM_CAM_POS);
+			right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+			up = glm::normalize(glm::cross(right, view));
+			ballPos = AIM_CAM_POS + view * 1.5f + right * (-0.5f) + up * (-0.5f); // left side
+		}
+		else
+		{
+			// Original walking hold position (right side)
+			view = glm::normalize(camera.target - camera.position);
+			right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+			up = glm::normalize(glm::cross(right, view));
+			ballPos = camera.position + view * 1.5f + right * 0.5f + up * (-0.5f);
+		}
 
 		glm::mat4 cameraBasis = glm::mat4(
 			glm::vec4(right, 0.f),
@@ -701,8 +722,8 @@ void SceneCans::Render()
 	}
 
 	// Only show aim line when game is active and ball not in air
-    //if (gameState == GAME_PLAYING && !m_balls.ball[i].inAir)
-        //DrawAimLine();
+    if (gameState == GAME_PLAYING && !m_balls->inAir)
+        DrawAimLine();
 	DrawRayCastLine();
 	RenderHUD();
 }
@@ -917,26 +938,54 @@ void SceneCans::HandleKeyPress()
 	}
 }
 
-void SceneCans::HandleMouseInput() {
-	static bool wasDown = false;
-	bool isDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+void SceneCans::HandleMouseInput() 
+{
 
-	if (isDown && !wasDown)   // on press
+	if (m_isAiming)
 	{
-		wasDown = true;
-
-		if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls->inAir)
+		// RMB held = adjust aim
+		if (MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_RIGHT))
 		{
-			LaunchBall();
+			double dx = MouseController::GetInstance()->GetMouseDeltaX();
+			double dy = MouseController::GetInstance()->GetMouseDeltaY();
 
-			// Restore camera to watch the cans fall
-			camera.position = m_savedCamPos;
-			camera.target = m_savedCamTarget;
-			camera.up = m_savedCamUp;
-			m_isAiming = false;
+			float sensitivity = 0.15f;
+
+			// Mouse Y controls throw angle (pitch) — up = higher arc
+			m_aimPitch += (float)dy * sensitivity;
+			m_aimPitch = glm::clamp(m_aimPitch, -20.f, 20.f);  // keep arc reasonable
+
+			// Mouse X shifts Z — lets player target different cans in the row
+			m_aimZOffset -= (float)dx * sensitivity * 0.05f;
+			m_aimZOffset = glm::clamp(m_aimZOffset, -5.f, -4.f);
 		}
+
+		// Recompute aim direction: launching rightward (+X), angled up by pitch
+		// Z offset steers toward front/back cans
+		m_aimDir = glm::normalize(glm::vec3(
+			cos(glm::radians(m_aimPitch)),   // rightward component
+			sin(glm::radians(m_aimPitch)),   // upward arc
+			m_aimZOffset                     // side-to-side targeting
+		));
+
+		
+		// LMB = throw
+		static bool wasDown = false;
+		bool isDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+		if (isDown && !wasDown)
+		{
+			wasDown = true;
+			if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls->inAir)
+			{
+				LaunchBall();
+				camera.position = m_savedCamPos;
+				camera.target = m_savedCamTarget;
+				camera.up = m_savedCamUp;
+				m_isAiming = false;
+			}
+		}
+		wasDown = isDown;
 	}
-	wasDown = isDown;
 }
 
 
@@ -1127,6 +1176,18 @@ void SceneCans::BuildCollisionBoxes()
 	counter.min = glm::vec3(-10.f, -2.f, 1.0f);
 	counter.max = glm::vec3(10.f, 2.f, 2.5f);
 	collisionBoxes.push_back(counter);
+
+	////separator
+	//AABB barrier;
+	//barrier.min = glm::vec3(6.f, -0.75f, -7.5f);
+	//barrier.max = glm::vec3(7.f, 8.f, 2.5f);
+	//collisionBoxes.push_back(barrier);
+
+	//AABB barrierL;
+	//barrierL.min = glm::vec3(-7.f, -0.75f, -7.5f);
+	//barrierL.max = glm::vec3(-6.f, 8.f, 2.5f);
+	//collisionBoxes.push_back(barrierL);
+
 }
 
 void SceneCans::InitialiseCans()
@@ -1136,16 +1197,16 @@ void SceneCans::InitialiseCans()
 	const float canSpacing = 0.65f;
 
 	//interactive cans
-	// Bottom row � 3 cans
+	// Bottom row — 3 cans
 	m_cans[0].can.pos = Vector3(-canSpacing, counterTopY, 1.5f);
 	m_cans[1].can.pos = Vector3(0.f, counterTopY, 1.5f);
 	m_cans[2].can.pos = Vector3(canSpacing, counterTopY, 1.5f);
 
-	// Middle row � 2 cans (offset half a spacing, raised one can height)
+	// Middle row — 2 cans (offset half a spacing, raised one can height)
 	m_cans[3].can.pos = Vector3(-canSpacing * 0.5f, counterTopY + canH, 1.5f);
 	m_cans[4].can.pos = Vector3(canSpacing * 0.5f, counterTopY + canH, 1.5f);
 
-	// Top row � 1 can
+	// Top row — 1 can
 	m_cans[5].can.pos = Vector3(0.f, counterTopY + canH * 2.f, 1.5f);
 
 	for (int i = 0; i < NUM_CANS; ++i)
@@ -1188,45 +1249,114 @@ void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
 
 void SceneCans::UpdateBall(float dt)
 {
-	//add ball when player picks up ball
-
-
+	if (!m_balls->inAir) return;
+	ApplyGravity(m_balls->ball, dt);
 }
 
 void SceneCans::UpdateCans(float dt)
 {
+	const float FRICTION = 0.85f;
 
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		if (!m_cans[i].knocked) continue;
+
+		m_cans[i].can.pos += m_cans[i].can.vel * dt;
+		m_cans[i].can.vel = m_cans[i].can.vel * FRICTION;
+
+		if (m_cans[i].can.vel.Length() < 0.01f)
+			m_cans[i].can.vel.SetZero();
+	}
 }
 
 void SceneCans::CheckBallCanCollisions()
 {
+	const float BALL_RADIUS = 0.15f;
+	const float CAN_RADIUS = 0.18f;  // tune to match your can model
+
+	Vector3 ballPos = m_balls->ball.pos;
+
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		if (!m_cans[i].active || m_cans[i].knocked) continue;
+
+		Vector3 canPos = m_cans[i].can.pos;
+		Vector3 diff = ballPos - canPos;
+		float dist = diff.Length();
+		float minDist = BALL_RADIUS + CAN_RADIUS;
+
+		if (dist < minDist && dist > 0.f)
+		{
+			// Knock the can over
+			m_cans[i].knocked = true;
+
+			// Give it a velocity in the direction of impact
+			Vector3 knockDir = diff;
+			knockDir.Normalize();
+			float impactSpeed = m_balls->ball.vel.Length() * 0.6f;
+			m_cans[i].can.vel = knockDir * impactSpeed;
+
+			// Deflect the ball slightly
+			m_balls->ball.vel.x *= 0.6f;
+			m_balls->ball.vel.z *= 0.6f;
+		}
+	}
 }
 
 void SceneCans::CheckCanCanCollisions()
 {
+	const float CAN_RADIUS = 0.18f;
+
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		if (!m_cans[i].knocked) continue;  // only moving cans hit others
+
+		for (int j = 0; j < NUM_CANS; ++j)
+		{
+			if (i == j || m_cans[j].knocked) continue;
+
+			Vector3 diff = m_cans[j].can.pos - m_cans[i].can.pos;
+			float dist = diff.Length();
+
+			if (dist < CAN_RADIUS * 2.f && dist > 0.f)
+			{
+				m_cans[j].knocked = true;
+
+				Vector3 pushDir = diff;
+				pushDir.Normalize();
+				float speed = m_cans[i].can.vel.Length() * 0.5f;
+				m_cans[j].can.vel = pushDir * speed;
+			}
+		}
+	}
 }
+
 
 void SceneCans::CheckFloorCollisions()
 {
+	const float FLOOR_Y = 0.3f;   // match your floor AABB top
+	const float BALL_RADIUS = 0.15f;
+
+	if (m_balls->ball.pos.y - BALL_RADIUS <= FLOOR_Y)
+	{
+		m_balls->ball.pos.y = FLOOR_Y + BALL_RADIUS;
+
+		// small bounce, then kill velocity
+		m_balls->ball.vel.y *= -0.2f;
+		m_balls->ball.vel.x *= 0.7f;
+		m_balls->ball.vel.z *= 0.7f;
+
+		if (std::abs(m_balls->ball.vel.y) < 0.5f)
+		{
+			m_balls->ball.vel.SetZero();
+			m_balls->inAir = false;
+		}
+	}
 }
 
 bool SceneCans::CheckSceneCollisions()
 {
-	// Check camera against all collision boxes
-	for (const AABB& box : collisionBoxes)
-	{
-		if (CheckAABBCollision(camera.position, 0.3f, box))
-		{
-			// If hitting floor
-			if (camera.position.y < box.max.y + 0.3f)
-			{
-				camera.position.y = box.max.y + 0.3f;
-			}
-			return true; 
-		}
-	}
-
-	return false; 
+	return false;
 }
 
 void SceneCans::LaunchBall()
@@ -1235,6 +1365,19 @@ void SceneCans::LaunchBall()
 	m_noOfBalls--;
 
 	if (m_noOfBalls < 0) m_noOfBalls == 0;
+
+	float launchSpeed = 14.f;
+
+	// Start ball at the launch point on the left side
+	m_balls->ball.pos = Vector3(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z + m_aimZOffset);
+
+	// Velocity driven by pitch angle — flies rightward in an arc
+	m_balls->ball.vel = Vector3(
+		m_aimDir.x * launchSpeed,
+		m_aimDir.y * launchSpeed,       // arc height set by pitch
+		m_aimDir.z * launchSpeed * 0.5f // gentle Z steering
+	);
+	m_balls->inAir = true;
 }
 
 void SceneCans::ResetGame()
@@ -1250,18 +1393,56 @@ void SceneCans::ResetGame()
 	InitialiseBalls();
 }
 
+void SceneCans::DrawAimLine()
+{
+	if (!m_isAiming) return;
+
+
+	float launchSpeed = 14.f;
+
+	glm::vec3 pos(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z + m_aimZOffset);
+	glm::vec3 vel(
+		m_aimDir.x * launchSpeed,
+		m_aimDir.y * launchSpeed,
+		m_aimDir.z * launchSpeed * 0.5f
+	);
+
+	const float SIM_DT = 0.04f;
+	const int MAX_STEPS = 60;
+	const float FLOOR_Y = 0.3f;
+
+	for (int i = 0; i < MAX_STEPS; ++i)
+	{
+		vel.y += GRAVITY * SIM_DT;
+		pos += vel * SIM_DT;
+
+		if (pos.y < FLOOR_Y) break;
+
+		if (i % 2 != 0) continue;  // every other step = spaced dots
+
+		float t = (float)i / MAX_STEPS;
+		float size = glm::mix(0.1f, 0.03f, t);  // dots shrink along path
+
+		glm::vec3 color = glm::mix(
+			glm::vec3(1.f, 1.f, 0.f),   // yellow at start
+			glm::vec3(1.f, 0.3f, 0.f),  // orange at end
+			t
+		);
+
+		modelStack.PushMatrix();
+		modelStack.Translate(pos.x, pos.y, pos.z);
+		modelStack.Scale(size, size, size);
+		meshList[GEO_SPHERE]->material.kAmbient = color;
+		meshList[GEO_SPHERE]->material.kDiffuse = color;
+		meshList[GEO_SPHERE]->material.kSpecular = glm::vec3(0.f);
+		meshList[GEO_SPHERE]->material.kShininess = 1.f;
+		RenderMesh(meshList[GEO_SPHERE], false);
+		modelStack.PopMatrix();
+	}
+}
+
 void SceneCans::DrawRayCastLine()
 {
-
-	//glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
-	//glm::vec3 crosshair = glm::vec3(crosshairPos.x, crosshairPos.y, crosshairPos.x);
-
-	//// Start the line just in front of the camera (0.5f offset)
-	//glm::vec3 lineStart = camera.position + rayDir * 3.f;
-
-	//glm::vec3 lineEnd = crosshair + rayDir * 2.f;
-
-
 	glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
 
 	// Start the line just in front of the camera (0.5f offset)
