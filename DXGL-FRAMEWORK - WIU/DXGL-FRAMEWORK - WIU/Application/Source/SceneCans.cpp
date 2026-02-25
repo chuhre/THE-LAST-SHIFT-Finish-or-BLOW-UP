@@ -76,12 +76,13 @@ void SceneCans::Init()
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
 	// Initialise camera properties
-	//camera.Init(45.f, 45.f, 10.f);
 	camera.Init(
 		glm::vec3(0, 2.1, 10),		// position
 		glm::vec3(0, 2, 0),		// target
 		glm::vec3(0, 1.0f, 0)		// up
 	);
+
+
 
 	// Init VBO here
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
@@ -157,10 +158,12 @@ void SceneCans::Init()
 	door[1] = { glm::vec3(-10.f, -0.1f, 6.25f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
 		
 	//GAME SETUP
-	SpawnCans();
-	SpawnBalls();
+	InitialiseCans();
+	InitialiseBalls();
+	BuildCollisionBoxes();
 	gameState = GAME_NOT_STARTED;
-	
+	SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = false;
+
 }
 
 
@@ -186,25 +189,62 @@ void SceneCans::Update(double dt)
 		light[0].position.y += static_cast<float>(dt) * 5.f;
 
 
-	// Store position before camera update
+	// Store position and target before camera update
 	glm::vec3 oldPos = camera.position;
+	glm::vec3 oldTarget = camera.target;
+	
+	// Only update camera movement when not aiming
+	if (!m_isAiming)
+		camera.Update(dt);
 
-	// Update camera position based on input
-	camera.Update(dt);
+	// if collided, revert camera pos
+	glm::vec3 updatedPos = camera.position;
+
+	// Resolve Vertical Collision: floor/Ceiling
+	camera.position = glm::vec3(oldPos.x, updatedPos.y, oldPos.z);
+	for (const AABB& box : collisionBoxes)
+	{
+		if (CheckAABBCollision(camera.position, 0.3f, box))
+		{
+			//if hit smth vertically, go back to old Y
+			camera.position.y = oldPos.y;
+			camera.target.y = oldTarget.y;
+			break;
+		}
+	}
+
+	//Resolve Horizontal Collision 
+	float currentY = camera.position.y;
+	camera.position = glm::vec3(updatedPos.x, currentY, updatedPos.z);
+
+	for (const AABB& box : collisionBoxes)
+	{
+		if (CheckAABBCollision(camera.position, 0.3f, box))
+		{
+			// If hit a wall, revert X and Z 
+			camera.position.x = oldPos.x;
+			camera.position.z = oldPos.z;
+			camera.target.x = oldTarget.x;   
+			camera.target.z = oldTarget.z;
+			break;
+		}
+	}
+		
+	
 
 
 	// === ANIMATION/INTERACTIONS ====
 	//Door interaction
-	showInteractPrompt = false;
+	showDoorInteractPrompt = false;
 	if (door[0].IsPlayerNear(camera.position, 2.5f))
 	{
 		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_CANS))
-			showInteractPrompt = true;
+			showDoorInteractPrompt = true;
 			
 		else 
 			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
 	}
-	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
+	if (showDoorInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		door[0].Open();
 	}
@@ -213,7 +253,7 @@ void SceneCans::Update(double dt)
 	{
 		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
 		door[0].Close();
-		showInteractPrompt = false;
+		showDoorInteractPrompt = false;
 	}
 
 	//side door
@@ -224,17 +264,23 @@ void SceneCans::Update(double dt)
 	}
 
 	
-
-	//game logic
-	if (ballCollected) 
+	//check ball collection
+	showPickupPrompt = false;
+	if (!ballCollected && RayHitsBall(2, 3.f))
 	{
-		gameState = GAME_PLAYING;
-		m_noOfBalls++;
-		m_throwsLeft++;
+		showPickupPrompt = true;
 
+		if (KeyboardController::GetInstance()->IsKeyPressed('F'))
+		{
+			ballCollected = true;
+			m_throwsLeft++;     
+			m_noOfBalls++;
+			gameState = GAME_PLAYING;
+			showPickupPrompt = false;
+		}
 	}
 
-
+	//game logic
 	if (gameState == GAME_PLAYING)
 	{
 		if (m_balls->inAir)
@@ -267,15 +313,31 @@ void SceneCans::Update(double dt)
 		
 	}
 
-	//check ball collection
+	// --- Booth interaction to enter aiming mode ---
+	bool nearBooth = glm::length(camera.position - glm::vec3(0.f, 2.f, 5.f)) < 2.5f;
 
-	/*if (dist.length() < 2.f)
+	if (nearBooth && ballCollected && gameState == GAME_PLAYING && !m_isAiming)
 	{
-		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to collect", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
-		ballCollected = true;
-		m_noOfBalls++;
-		m_throwsLeft++;
-	}*/
+		showBoothPrompt = true;
+		if (KeyboardController::GetInstance()->IsKeyPressed('F'))
+		{
+			// Save current camera state
+			m_savedCamPos = camera.position;
+			m_savedCamTarget = camera.target;
+			m_savedCamUp = camera.up;
+
+			// Snap to aiming position
+			camera.position = AIM_CAM_POS;
+			camera.target = AIM_CAM_TARGET;
+			camera.up = glm::vec3(0.f, 1.f, 0.f);
+
+			m_isAiming = true;
+		}
+	}
+	else
+	{
+		showBoothPrompt = false;
+	}
 }
 
 void SceneCans::Render()
@@ -313,13 +375,8 @@ void SceneCans::Render()
 		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightPosition_cameraspace));
 	}
 
-	modelStack.PushMatrix();
-	// Render objects
-	RenderMesh(meshList[GEO_AXES], false);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
 	// Render light
+	modelStack.PushMatrix();
 	modelStack.Translate(light[0].position.x, light[0].position.y, light[0].position.z);
 	modelStack.Scale(0.1f, 0.1f, 0.1f);
 	RenderMesh(meshList[GEO_SPHERE], false);
@@ -330,7 +387,7 @@ void SceneCans::Render()
 	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
 	modelStack.Rotate(door[0].rotation, 0, 1, 0);   
 	modelStack.Rotate(180, 0, 1, 0);
-	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f);
+	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f); 
 	modelStack.Scale(door[0].width, door[0].height, 0.2f);
 	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
 	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
@@ -350,7 +407,7 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_DOOR], true);
 	modelStack.PopMatrix();
 
-	if (showInteractPrompt)
+	if (showDoorInteractPrompt)
 		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
 
 
@@ -447,6 +504,13 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
+	
+
+	int renderBall;
+
+	if (ballCollected) renderBall = 0;
+	else renderBall = 1;
+
 	//COUNTER
 	{
 		//render counter
@@ -464,6 +528,7 @@ void SceneCans::Render()
 		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
 		modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
 		modelStack.Scale(20.f, 8.f, 8.f);
+		modelStack.Rotate(0, renderBall, 0, 0);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -474,6 +539,7 @@ void SceneCans::Render()
 		modelStack.PushMatrix();
 		modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
 		modelStack.Scale(20.f, 8.f, 8.f);
+		modelStack.Rotate(0, renderBall, 0, 0);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -482,16 +548,50 @@ void SceneCans::Render()
 
 		modelStack.PopMatrix();
 	}
-	
-	//rernder missing ball
+
+	//render missing ball
 	modelStack.PushMatrix();
 	modelStack.Translate(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
 	modelStack.Scale(20.f, 20.f, 20.f);
+	modelStack.Rotate(0, renderBall, 0, 0);
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 	meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 	meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
+
+
+	//render ball on screen, looks like player is holding it
+	if (ballCollected && !m_isAiming)
+	{
+		int holdBall = 1;
+		if (m_noOfBalls == 0) holdBall = 0;
+
+		glm::vec3 view = glm::normalize(camera.target - camera.position);
+		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
+		glm::vec3 up = glm::normalize(glm::cross(right, view));
+		glm::vec3 ballPos = camera.position + view * 1.5f + right * 0.5f + up * (-0.5f);
+
+
+		glm::mat4 cameraBasis = glm::mat4(
+			glm::vec4(right, 0.f),
+			glm::vec4(up, 0.f),
+			glm::vec4(-view, 0.f),
+			glm::vec4(ballPos, 1.f)
+		);
+
+		modelStack.PushMatrix();
+		modelStack.LoadIdentity();
+		modelStack.LoadMatrix(cameraBasis);
+		modelStack.Scale(18.f, 18.f, 18.f);
+		modelStack.Rotate(0, holdBall, 0, 0);
+		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		RenderMesh(meshList[GEO_BALL], true);
+		modelStack.PopMatrix();
+	}
+	
 
 
 	//MAIN TABLE 
@@ -580,6 +680,30 @@ void SceneCans::Render()
 
 	}
 	
+	//draw outlines of collision area
+	for (const AABB& box : collisionBoxes)
+	{
+		modelStack.PushMatrix();
+
+		// Calculate center and size
+		glm::vec3 center = (box.min + box.max) * 0.5f;
+		glm::vec3 size = box.max - box.min;
+
+		modelStack.Translate(center.x, center.y, center.z);
+		modelStack.Scale(size.x, size.y, size.z);
+
+		// Render as wireframe
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		RenderMesh(meshList[GEO_CUBE], false);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		modelStack.PopMatrix();
+	}
+
+	// Only show aim line when game is active and ball not in air
+    //if (gameState == GAME_PLAYING && !m_balls.ball[i].inAir)
+        //DrawAimLine();
+	DrawRayCastLine();
 	RenderHUD();
 }
 
@@ -789,14 +913,7 @@ void SceneCans::HandleKeyPress()
 	// --- R key: restart (only on win or lose screen) ---
 	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
 	{
-		if (gameState == GAME_WON || gameState == GAME_LOST)
-		{
-			// Mark game completed if won, then return to lobby
-			if (gameState == GAME_WON)
-				SceneManager::GetInstance()->gameCompleted[1] = true; // index 1 = shooting booth
-
-			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
-		}
+		ResetGame();
 	}
 }
 
@@ -809,7 +926,15 @@ void SceneCans::HandleMouseInput() {
 		wasDown = true;
 
 		if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls->inAir)
+		{
 			LaunchBall();
+
+			// Restore camera to watch the cans fall
+			camera.position = m_savedCamPos;
+			camera.target = m_savedCamTarget;
+			camera.up = m_savedCamUp;
+			m_isAiming = false;
+		}
 	}
 	wasDown = isDown;
 }
@@ -908,7 +1033,120 @@ void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
 	glDisable(GL_BLEND);
 }
 
-void SceneCans::SpawnCans()
+bool SceneCans::RayHitsBall(int ballIndex, float maxDist)
+{
+	// Convert Vector3 ball pos to glm
+	glm::vec3 ballPos(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
+
+	// Ray from camera eye along look direction
+	glm::vec3 rayOrigin = camera.position;
+	glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
+
+
+	//ball must be within maxDist of the player at all
+	float distToBall = glm::length(ballPos - rayOrigin);
+	if (distToBall > maxDist) return false;
+
+	//ball must be roughly infront of player -> dot = 1 means looking directly at it, 0 means 90 degrees away
+	glm::vec3 dirToBall = glm::normalize(ballPos - rayOrigin);
+	float dot = glm::dot(rayDir, dirToBall);
+	if (dot < 0.85f) return false;
+
+
+	// Ray-sphere intersection
+	//from ball center to ray start
+	glm::vec3 oc = rayOrigin - ballPos; 
+	float b = glm::dot(oc, rayDir);
+	float c = glm::dot(oc, oc) - (0.75f * 0.5f);  //pick-up sphere radius
+	float discriminant = (b * b) - c;
+
+	if (discriminant < 0.f) return false;  // ray misses sphere
+
+	// Check the hit is within maxDist in front of camera
+	float t = -b - sqrtf(discriminant);
+	return (t > 0.f && t < maxDist);
+}
+
+bool SceneCans::CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box)
+{
+	glm::vec3 closestPoint;
+	closestPoint.x = glm::clamp(pos.x, box.min.x, box.max.x);
+	closestPoint.y = glm::clamp(pos.y, box.min.y, box.max.y);
+	closestPoint.z = glm::clamp(pos.z, box.min.z, box.max.z);
+	float distance = glm::distance(closestPoint, pos);
+	return distance < radius;
+}
+
+void SceneCans::BuildCollisionBoxes()
+{
+	collisionBoxes.clear();
+
+	// Floor
+	AABB floor;
+	floor.min = glm::vec3(-10.f, -0.75f, -7.5f);
+	floor.max = glm::vec3(10.f, -0.3f, 14.5f);
+	collisionBoxes.push_back(floor);
+
+	/*AABB ceiling;
+	ceiling.min = glm::vec3(-10.f, -2.f, -7.5f);
+	ceiling.max = glm::vec3(10.f, -0.1f, 14.5f);
+	collisionBoxes.push_back(ceiling);*/
+
+	//// Front wall
+	//AABB frontWall;
+	//frontWall.min = glm::vec3(-10.f, -2.f, -7.6f);
+	//frontWall.max = glm::vec3(10.f, 6.f, -7.4f);
+	//collisionBoxes.push_back(frontWall);
+
+	//// Right wall 
+	//AABB rightWall;
+	//rightWall.min = glm::vec3(9.7f, -2.f, -7.5f);
+	//rightWall.max = glm::vec3(10.f, 6.f, 14.5f);
+	//collisionBoxes.push_back(rightWall);
+
+	//// Left wall 
+	//AABB leftWallFront;
+	//leftWallFront.min = glm::vec3(-10.f, -2.f, -7.5f);
+	//leftWallFront.max = glm::vec3(-9.7f, 6.f, 4.5f);  // up to door start
+	//collisionBoxes.push_back(leftWallFront);
+
+
+	//AABB leftWallBack;
+	//leftWallBack.min = glm::vec3(-10.f, -2.f, 8.f);    // past door end
+	//leftWallBack.max = glm::vec3(-9.7f, 6.f, 14.5f);
+	//collisionBoxes.push_back(leftWallBack);
+
+	//// wall above side door
+	//AABB leftWallTop;  
+	//leftWallTop.min = glm::vec3(-10.f, 3.65f, 4.5f);
+	//leftWallTop.max = glm::vec3(-9.7f, 6.f, 8.f);
+	//collisionBoxes.push_back(leftWallTop);
+
+	//// Back wall 
+	//AABB backWallLeft;
+	//backWallLeft.min = glm::vec3(-10.f, -2.f, 14.3f);
+	//backWallLeft.max = glm::vec3(-0.f, 6.f, 14.6f);
+	//collisionBoxes.push_back(backWallLeft);
+
+	//AABB backWallRight;
+	//backWallRight.min = glm::vec3(3.f, -2.f, 14.3f);
+	//backWallRight.max = glm::vec3(10.f, 6.f, 14.6f);
+	//collisionBoxes.push_back(backWallRight);
+
+	//// wall above main door
+	//AABB backWallTop;  
+	//backWallTop.min = glm::vec3(-0.f, 3.65f, 14.3f);
+	//backWallTop.max = glm::vec3(3.f, 6.f, 14.6f);
+	//collisionBoxes.push_back(backWallTop);
+
+	//// Counter 
+	//AABB counter;
+	//counter.min = glm::vec3(-10.f, -2.f, 1.0f);
+	//counter.max = glm::vec3(10.f, 1.5f, 2.5f);
+	//collisionBoxes.push_back(counter);
+}
+
+void SceneCans::InitialiseCans()
 {
 	const float counterTopY = 1.1f;
 	const float canH = 0.8f;   // visual height of one can (scaled)
@@ -944,10 +1182,13 @@ void SceneCans::SpawnCans()
 	m_staticCanPos[5] = glm::vec3(0.f, counterTopY + canH * 2.f, 1.5f);
 }
 
-void SceneCans::SpawnBalls()
+void SceneCans::InitialiseBalls()
 {
 	m_noOfBalls = 2;
 	m_throwsLeft = 2;
+	ballCollected = false;
+
+	m_isAiming = false;
 
 	//initialise balls pos
 	m_balls[0].ball.pos = Vector3(-0.25f, 0.7f, 0.f);
@@ -986,19 +1227,91 @@ void SceneCans::CheckFloorCollisions()
 {
 }
 
+bool SceneCans::CheckSceneCollisions()
+{
+	// Check camera against all collision boxes
+	for (const AABB& box : collisionBoxes)
+	{
+		if (CheckAABBCollision(camera.position, 0.3f, box))
+		{
+			// If hitting floor
+			if (camera.position.y < box.max.y + 0.3f)
+			{
+				camera.position.y = box.max.y + 0.3f;
+			}
+			return true; 
+		}
+	}
+
+	return false; 
+}
+
 void SceneCans::LaunchBall()
 {
+	m_throwsLeft--;
+	m_noOfBalls--;
 
+	if (m_noOfBalls < 0) m_noOfBalls == 0;
 }
 
 void SceneCans::ResetGame()
 {
-	SpawnCans();
-	SpawnBalls();
+	//reset camera
+	camera.Init(
+		glm::vec3(0, 2.1, 10),		// position
+		glm::vec3(0, 2, 0),		// target
+		glm::vec3(0, 1.0f, 0)		// up
+	);
+	gameState = GAME_NOT_STARTED;
+	InitialiseCans();
+	InitialiseBalls();
 }
 
-void SceneCans::DrawAimLine()
+void SceneCans::DrawRayCastLine()
 {
+
+	//glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
+	//glm::vec3 crosshair = glm::vec3(crosshairPos.x, crosshairPos.y, crosshairPos.x);
+
+	//// Start the line just in front of the camera (0.5f offset)
+	//glm::vec3 lineStart = camera.position + rayDir * 3.f;
+
+	//glm::vec3 lineEnd = crosshair + rayDir * 2.f;
+
+
+	glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
+
+	// Start the line just in front of the camera (0.5f offset)
+	glm::vec3 lineStart = camera.position + rayDir * 0.1f;
+
+	glm::vec3 lineEnd = camera.position + rayDir * 3.f;
+
+	glm::vec3 midPoint = (lineStart + lineEnd) * 0.5f;
+	float lineLength = glm::length(lineEnd - lineStart);
+
+	// Rotate from Z-axis to rayDir
+	glm::vec3 zAxis(0.f, 0.f, 1.f);
+	glm::vec3 rotAxis = glm::cross(zAxis, rayDir);
+	float rotAngle = glm::degrees(acosf(glm::clamp(glm::dot(zAxis, rayDir), -1.f, 1.f)));
+
+	bool rayHit = RayHitsBall(2, 3.f);
+	glm::vec3 lineColor = rayHit ? glm::vec3(0.f, 1.f, 0.f)
+		: glm::vec3(1.f, 0.f, 0.f);
+
+	modelStack.PushMatrix();
+	modelStack.Translate(midPoint.x, midPoint.y, midPoint.z);
+
+	if (glm::length(rotAxis) > 0.001f)
+		modelStack.Rotate(rotAngle, rotAxis.x, rotAxis.y, rotAxis.z);
+
+	modelStack.Scale(0.02f, 0.02f, lineLength);
+
+	meshList[GEO_CUBE]->material.kAmbient = lineColor;
+	meshList[GEO_CUBE]->material.kDiffuse = lineColor;
+	meshList[GEO_CUBE]->material.kSpecular = glm::vec3(0.f);
+	meshList[GEO_CUBE]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CUBE], false);
+	modelStack.PopMatrix();
 }
 
 void SceneCans::RenderHUD()
@@ -1008,25 +1321,47 @@ void SceneCans::RenderHUD()
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT], "Find the mising ball to start!", glm::vec3(1, 1, 0.5), 35, 20, 575);
 	}
+	else if (gameState == GAME_PLAYING)
+	{
+		if (!m_isAiming)
+		{
+			RenderTextOnScreen(meshList[GEO_TEXT], "Knock down all the cans to win!", glm::vec3(1, 1, 0.5), 35, 20, 575);
+		}
+			
 
-	std::string throwsText = "Throws left: " + std::to_string(m_throwsLeft);
-	RenderTextOnScreen(meshList[GEO_TEXT], throwsText, glm::vec3(1, 1, 1), 35, 20, 540);
+		std::string throwsText = "Throws left: " + std::to_string(m_throwsLeft);
+		RenderTextOnScreen(meshList[GEO_TEXT], throwsText, glm::vec3(1, 1, 1), 35, 20, 540);
 
-	int knocked = 0;
-	for (int i = 0; i < NUM_CANS; ++i) 
-		if (m_cans[i].knocked) knocked++;
+		int knocked = 0;
+		for (int i = 0; i < NUM_CANS; ++i)
+			if (m_cans[i].knocked) knocked++;
 
-	std::string cansText = "Cans down: " + std::to_string(knocked) + "/" + std::to_string(NUM_CANS);
-	RenderTextOnScreen(meshList[GEO_TEXT], cansText, glm::vec3(1, 1, 1), 35, 20, 490);
+		std::string cansText = "Cans down: " + std::to_string(knocked) + "/" + std::to_string(NUM_CANS);
+		RenderTextOnScreen(meshList[GEO_TEXT], cansText, glm::vec3(1, 1, 1), 35, 20, 490);
 
+	}
+	
+	//ball
+	if (showPickupPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to pick up ball",glm::vec3(1.f, 1.f, 0.f), 35, 220, 200);
+
+	//booth
+	if (showBoothPrompt && !m_isAiming)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to start aiming", glm::vec3(1, 1, 0), 35, 200, 200);
+
+	if (m_isAiming)
+		RenderTextOnScreen(meshList[GEO_TEXT], "RMB to aim, LMB to throw!", glm::vec3(1, 1, 0), 35, 20, 580);
+		
 	//crosshair
-	RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40, 395, 290);
+	if(gameState == GAME_NOT_STARTED || gameState == GAME_PLAYING && !m_isAiming)
+		RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40, crosshairPos.x, crosshairPos.y);
 
+	
 	//end state
 	if (gameState == GAME_WON)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT], "YOU WIN!", glm::vec3(0, 1, 0), 60, 280, 300);
-		RenderTextOnScreen(meshList[GEO_TEXT], "Press F at the door to leave",
+		RenderTextOnScreen(meshList[GEO_TEXT], "Head back to the lobby.",
 			glm::vec3(1, 1, 0), 28, 200, 240);
 	}
 	else if (gameState == GAME_LOST)

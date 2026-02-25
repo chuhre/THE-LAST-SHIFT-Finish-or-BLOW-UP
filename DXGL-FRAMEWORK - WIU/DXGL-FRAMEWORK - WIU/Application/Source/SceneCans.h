@@ -11,7 +11,13 @@
 #include "Door.h"
 #include "PhysicsObject.h"
 
+struct AABB {
+	glm::vec3 min;
+	glm::vec3 max;
 
+	AABB() : min(0.0f), max(0.0f) {}
+	AABB(const glm::vec3& min, const glm::vec3& max) : min(min), max(max) {}
+};
 
 class SceneCans : public Scene
 {
@@ -138,6 +144,13 @@ private:
 	unsigned m_parameters[U_TOTAL];
 
 	FPCamera camera;
+	bool m_isAiming = false;
+	glm::vec3 m_savedCamPos;
+	glm::vec3 m_savedCamTarget;
+	glm::vec3 m_savedCamUp;
+
+	const glm::vec3 AIM_CAM_POS = glm::vec3(7.7f, 1.88f, -0.7f);
+	const glm::vec3 AIM_CAM_TARGET = glm::vec3(6.7f, 1.9f, -0.8f);
 
 	MatrixStack modelStack, viewStack, projectionStack;
 
@@ -149,7 +162,7 @@ private:
 	// door
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
-	bool showInteractPrompt;
+	bool showDoorInteractPrompt;
 
 	// Game state
 	GameState gameState;
@@ -164,31 +177,39 @@ private:
 	int m_noOfBalls;
 	int  m_throwsLeft;
 	bool ballCollected;
+	bool showPickupPrompt = false;
+	bool RayHitsBall(int ballIndex, float maxDist);
 
-	
+	//booth
+	bool showBoothPrompt = false;
 
+	//crosshair
+	Vector3 crosshairPos = Vector3(405, 290, 0);
 
 	// Collision detection
+	std::vector<AABB> collisionBoxes;
 	glm::vec3 playerSize;
-	bool CheckWallCollision(const glm::vec3& pos);
+	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
+	void BuildCollisionBoxes();
 
 	//physics
-	void SpawnCans();
-	void SpawnBalls();
+	void InitialiseCans();
+	void InitialiseBalls();
 	void ApplyGravity(PhysicsObject& obj, float dt);
 	void UpdateBall(float dt);
 	void UpdateCans(float dt);
 	void CheckBallCanCollisions();
 	void CheckCanCanCollisions();
 	void CheckFloorCollisions();
+	bool CheckSceneCollisions();
 	void LaunchBall();
 	void ResetGame();
 
 	//helpers
+	void DrawRayCastLine();
 	void DrawAimLine();
 	void RenderHUD();
 
-	//getters
 
 	//gravity
 	const float GRAVITY = -25.f;
