@@ -7,6 +7,21 @@
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
+#include "Door.h"
+
+
+
+struct Duck
+{
+	glm::vec3 pos;          // XZ used for movement; Y is kept flat (water surface)
+	glm::vec2 velocity;     // movement direction * speed (XZ plane)
+	float     facingAngle;  // degrees, Y-axis rotation for rendering
+	bool      isCorrect;    // true = one of the 3 "right" ducks
+	bool      caught;       // has the player caught this duck?
+	float     bobOffset;    // per-duck phase offset for bobbing animation
+	float     bobTimer;     // time accumulator for bobbing
+};
+
 
 class SceneDucks : public Scene
 {
@@ -23,7 +38,8 @@ public:
 		GEO_FLOOR,
 		GEO_WALL,
 		GEO_CEILING,
-		GEO_COUNTER,       
+		GEO_COUNTER,
+		GEO_DOOR,
 
 		GEO_LEFT,
 		GEO_RIGHT,
@@ -32,9 +48,13 @@ public:
 		GEO_FRONT,
 		GEO_BACK,
 
-
-		GEO_DOOR_HOLE,
-		GEO_DOOR,
+		GEO_BALLOON,
+		GEO_CRATE,
+		GEO_CRATE1,
+		GEO_DUCKTABLE,
+		GEO_TOYTRAIN,
+		GEO_TOYPLANE,
+		GEO_DUCKBASKETBALL,
 
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
@@ -78,21 +98,11 @@ public:
 		U_COLOR_TEXTURE,
 		U_LIGHTENABLED,
 
-
 		U_TEXT_ENABLED,
 		U_TEXT_COLOR,
 
 		U_TOTAL,
 	};
-
-
-	/*enum GameState
-	{
-		GAME_NOT_STARTED = 0,
-		GAME_PLAYING,
-		GAME_WON,
-		GAME_LOST
-	};*/
 
 	enum GameState { STATE_FIND_HOOK, STATE_PLAYING, STATE_WON };
 	GameState gameState = STATE_FIND_HOOK;
@@ -102,9 +112,20 @@ public:
 
 	// Scoring
 	int ducksPickedUp = 0;
-	static const int MAX_DUCKS = 3;
 	float catchTimer = 0.f;   // flash "GOT ONE!"
-	
+	float wrongTimer = 0.f;   // flash "WRONG DUCK!"
+
+	// Duck flock constants
+	static const int NUM_DUCKS = 9;
+	static const int MAX_DUCKS = 3;   // ducks the player must catch to win
+
+	// Pool boundary: water sphere radius(1) * XZ scale(18) * pool root scale(0.2) = 3.6
+	static constexpr float POOL_RADIUS = 3.35f;
+	// Duck collision radius scaled proportionally to pool size
+	static constexpr float DUCK_RADIUS = 0.26f;
+
+	// Duck array
+	Duck ducks[NUM_DUCKS];
 
 
 	SceneDucks();
@@ -117,7 +138,17 @@ public:
 
 private:
 	void HandleKeyPress();
+	void HandleMouseInput();
 	void RenderMesh(Mesh* mesh, bool enableLight);
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
+	void RenderText(Mesh* mesh, std::string text, glm::vec3 color);
+	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
+	void RenderSkybox();
+	void RenderDucks();
+
+	// Duck logic
+	void InitDucks();
+	void UpdateDucks(float dt);
 
 	unsigned m_vertexArrayID;
 	Mesh* meshList[NUM_GEOMETRY];
@@ -125,10 +156,8 @@ private:
 	unsigned m_programID;
 	unsigned m_parameters[U_TOTAL];
 
-	//AltAzCamera camera;
-	int projType = 1; // fix to 0 for orthographic, 1 for projection
+	int projType = 1; // 0 = orthographic, 1 = perspective
 	FPCamera camera;
-
 
 	MatrixStack modelStack, viewStack, projectionStack;
 
@@ -136,66 +165,48 @@ private:
 	Light light[NUM_LIGHTS];
 	bool enableLight;
 
-
-	//duck anim
-	float duckAngle = 0.f;   // current angle around the circle
-	float duckRadius = 12.f;  // radius of the circle
-	float duckSpeed = 0.3f;   // radians per second
-
-	
-
-
 	// ANIMATIONS/INTERACTIONS
 	// door
-	float doorRotation;  // 0 = closed, 90 = open
+	float doorRotation;
 	bool isDoorOpen;
-	glm::vec3 doorPosition; // Store door position
-	// Helper function to check if player is near door
+	glm::vec3 doorPosition;
 	bool IsPlayerNearDoor(float radius);
 
-
-	// light 
+	// light switch
 	glm::vec3 lightSwitchPosition;
 	bool isLightSwitchOn;
 	float leverRotation;
-
 	bool IsPlayerNearLightSwitch(float radius);
-
 
 	// shutter
 	glm::vec3 shutterButtonPosition;
 	bool isShutterOpen;
 	float shutterHeight;
 	float buttonPressDepth;
-
 	bool IsPlayerNearShutterButton(float radius);
 
-	//HOOK
+	// hook
 	bool IsPlayerNearHook(float radius);
 
+	// pool interaction
+	bool IsPlayerNearPool(float radius);
 
-	//// Game state
-	//GameState gameState;
-	//CustomerState customerState;
+	// top-down camera mode
+	bool isTopDown = false;
+	glm::vec3 savedCamPos;      // FP position saved before entering top-down
+	glm::vec3 savedCamTarget;   // FP target saved before entering top-down
+	glm::vec3 savedCamUp;       // FP up saved before entering top-down
 
-	
-
-	// Collision detection
+	// Collision
 	glm::vec3 playerSize;
 	bool CheckWallCollision(const glm::vec3& pos);
 
-	void RenderSkybox();
-	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
-		float sizex, float sizey);
-
-	void HandleMouseInput();
-
-	void RenderText(Mesh* mesh, std::string text, glm::vec3
-		color);
-	void RenderTextOnScreen(Mesh* mesh, std::string text,
-		glm::vec3 color, float size, float x, float y);
-
 	float fps = 0;
+
+	// door
+	static const int NUM_DOORS = 2;
+	Door door[NUM_DOORS];
+	bool showInteractPrompt;
 };
 
 #endif

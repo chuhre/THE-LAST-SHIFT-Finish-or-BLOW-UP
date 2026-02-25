@@ -11,6 +11,10 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <cstdlib>  
+#include <ctime>     
+#include <cmath>
+#include <cstdio>    
 
 #include "shader.hpp"
 #include "Application.h"
@@ -20,37 +24,69 @@
 #include "LoadTGA.h"
 #include "SceneManager.h"
 
-SceneDucks::SceneDucks()
+// Forward declare the global GLFW window from Application.cpp
+extern GLFWwindow* m_window;
+
+// Random float in [lo, hi]
+static float RandRange(float lo, float hi)
+{
+	return lo + (hi - lo) * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
+}
+
+SceneDucks::SceneDucks() 
+{
+}
+SceneDucks::~SceneDucks() 
 {
 }
 
-SceneDucks::~SceneDucks()
+void SceneDucks::InitDucks()
 {
+	srand(static_cast<unsigned>(time(nullptr)));
+
+	for (int i = 0; i < NUM_DUCKS; ++i)
+	{
+		Duck& d = ducks[i];
+
+		float angle = glm::two_pi<float>() * i / NUM_DUCKS + RandRange(-0.3f, 0.3f);
+		float radius = RandRange(0.3f, POOL_RADIUS * 0.7f);
+
+		d.pos = glm::vec3(radius * cosf(angle), 1.5f, radius * sinf(angle));
+		d.caught = false;
+		d.bobOffset = RandRange(0.f, glm::two_pi<float>());
+		d.bobTimer = 0.f;
+
+		float vAngle = RandRange(0.f, glm::two_pi<float>());
+		float speed = RandRange(0.5f, 1.2f);
+		d.velocity = glm::vec2(cosf(vAngle) * speed, sinf(vAngle) * speed);
+		d.facingAngle = glm::degrees(vAngle);
+
+		d.isCorrect = false;
+	}
+
+	int indices[NUM_DUCKS];
+	for (int i = 0; i < NUM_DUCKS; ++i) indices[i] = i;
+	for (int i = 0; i < MAX_DUCKS; ++i)
+	{
+		int j = i + rand() % (NUM_DUCKS - i);
+		std::swap(indices[i], indices[j]);
+		ducks[indices[i]].isCorrect = true;
+	}
 }
 
 void SceneDucks::Init()
 {
-	// Set background color to dark blue
 	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	//Enable depth buffer and depth testing
 	glEnable(GL_DEPTH_TEST);
-
-	//Enable back face culling
 	glEnable(GL_CULL_FACE);
-
-	//Default to fill mode
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-	// Generate a default VAO for now
 	glGenVertexArrays(1, &m_vertexArrayID);
 	glBindVertexArray(m_vertexArrayID);
 
-	// Load the shader programs
 	m_programID = LoadShaders("Shader//Texture.vertexshader", "Shader//Text.fragmentshader");
 	glUseProgram(m_programID);
 
-	// Get a handle for our "MVP" uniform
 	m_parameters[U_MVP] = glGetUniformLocation(m_programID, "MVP");
 	m_parameters[U_MODELVIEW] = glGetUniformLocation(m_programID, "MV");
 	m_parameters[U_MODELVIEW_INVERSE_TRANSPOSE] = glGetUniformLocation(m_programID, "MV_inverse_transpose");
@@ -76,75 +112,68 @@ void SceneDucks::Init()
 	m_parameters[U_TEXT_ENABLED] = glGetUniformLocation(m_programID, "textEnabled");
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
-	// Initialise camera properties
-	//camera.Init(45.f, 45.f, 10.f);
 	camera.Init(
-		glm::vec3(0, 2.1, 10),		// position
-		glm::vec3(0, 2, 0),		// target
-		glm::vec3(0, 1.0f, 0)		// up
+		glm::vec3(0, 2.1f, 10),
+		glm::vec3(0, 2, 0),
+		glm::vec3(0, 1.0f, 0)
 	);
 
-	// Init VBO here
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
-	{
 		meshList[i] = nullptr;
-	}
 
 	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 10000.f, 10000.f, 10000.f);
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
-	//meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
-	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
-	// DUCKKKK
 	meshList[GEO_POOL] = MeshBuilder::GenerateOBJ("Pool", "Models//pool.obj");
 	meshList[GEO_POOL]->textureID = LoadTGA("Images//pool1.tga");
 	meshList[GEO_WATER] = MeshBuilder::GenerateSphere("Water", glm::vec3(0.1f, 0.4f, 0.8f), 1.f, 32);
 	meshList[GEO_WATER]->textureID = LoadTGA("Images//water.tga");
 	meshList[GEO_DUCK] = MeshBuilder::GenerateOBJ("Duck", "Models//duck1.obj");
 	meshList[GEO_DUCKLEYE] = MeshBuilder::GenerateSphere("LeftDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
-	meshList[GEO_DUCKREYE] = MeshBuilder::GenerateSphere("RighttDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
+	meshList[GEO_DUCKREYE] = MeshBuilder::GenerateSphere("RightDuckEye", glm::vec3(0.0f, 0.0f, 0.0f), 1.f, 32);
 	meshList[GEO_PEGHOOK] = MeshBuilder::GenerateOBJ("Peghook", "Models//peghook.obj");
 
-	// UI
 	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
 	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
 	meshList[GEO_GUI] = MeshBuilder::GenerateQuad("GUI", glm::vec3(1, 1, 1), 1.f);
 
-	// Environment (copy from SceneShooting)
-	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f),20.f, 0.2f, 15.f);
-	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),20.f, 0.2f, 15.f);
-	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f),1.f, 1.f, 1.f);
-	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f),20.f, 1.0f, 0.4f);
-	
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor",glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling",glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall",glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);
+	meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");
+	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter",glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
+	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
+
+	meshList[GEO_BALLOON] = MeshBuilder::GenerateOBJ("Balloon", "Models//balloon.obj");
+	meshList[GEO_CRATE] = MeshBuilder::GenerateOBJ("Crate", "Models//cratebig.obj");
+	meshList[GEO_CRATE1] = MeshBuilder::GenerateOBJ("Crate1", "Models//crate.obj");
+	meshList[GEO_DUCKTABLE] = MeshBuilder::GenerateOBJ("Ducktable", "Models//ducktable.obj");
+	meshList[GEO_DUCKTABLE]->textureID = LoadTGA("Images//ducktable.tga");
+	meshList[GEO_TOYTRAIN] = MeshBuilder::GenerateOBJ("Toytrain", "Models//toytrain.obj");
+	meshList[GEO_TOYTRAIN]->textureID = LoadTGA("Images//toytrain.tga");
+	meshList[GEO_TOYPLANE] = MeshBuilder::GenerateOBJ("Toyplane", "Models//toyplane.obj");
+	meshList[GEO_TOYPLANE]->textureID = LoadTGA("Images//toyplane.tga");
+	meshList[GEO_DUCKBASKETBALL] = MeshBuilder::GenerateOBJ("Duckbasketball", "Models//duckbasketball.obj");
 
 
-
-
-	// In Init() — change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
-	// Player collision box size (width, height, depth)
 	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
-
-	// ANIMATIONS
-
-	// ANIMATIONS
 	gameState = STATE_FIND_HOOK;
 	hookPickedUp = false;
-	hookWorldPos = glm::vec3(4.f, 0.5f, 5.f);
+	hookWorldPos = glm::vec3(9.5, -1.85f, 10.5f);
 	ducksPickedUp = 0;
 	catchTimer = 0.f;
-	duckAngle = 0.f;
-	duckRadius = 12.f;
-	duckSpeed = 1.f;
 
+	InitDucks();
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
-	light[0].position = glm::vec3(0, 5, 0);
+	light[0].position = glm::vec3(0, 5, 3);
 	light[0].color = glm::vec3(1, 1, 1);
 	light[0].type = Light::LIGHT_POINT;
 	light[0].power = 1;
@@ -167,20 +196,95 @@ void SceneDucks::Init()
 	glUniform1f(m_parameters[U_LIGHT0_EXPONENT], light[0].exponent);
 
 	enableLight = true;
-
-
 }
 
 bool SceneDucks::IsPlayerNearHook(float radius)
 {
-	float dx = camera.position.x - hookWorldPos.x;
-	float dy = camera.position.y - hookWorldPos.y;
-	float dz = camera.position.z - hookWorldPos.z;
-	float distSq = dx * dx + dy * dy + dz * dz;
-	return distSq <= (radius * radius);
+	glm::vec3 diff = camera.position - hookWorldPos;
+	return glm::dot(diff, diff) <= radius * radius;
 }
 
+bool SceneDucks::IsPlayerNearPool(float radius)
+{
+	glm::vec3 poolCentre(0.f, -1.5f, 0.f);
+	glm::vec3 diff = camera.position - poolCentre;
+	return glm::dot(diff, diff) <= radius * radius;
+}
 
+void SceneDucks::UpdateDucks(float dt)
+{
+	for (int i = 0; i < NUM_DUCKS; ++i)
+	{
+		Duck& d = ducks[i];
+		if (d.caught) continue;
+
+		d.bobTimer += dt;
+		float bob = sinf(d.bobTimer * 2.f + d.bobOffset) * 0.08f;
+		d.pos.y = 1.5f + bob;
+
+		d.pos.x += d.velocity.x * dt;
+		d.pos.z += d.velocity.y * dt;
+
+		float distXZ = sqrtf(d.pos.x * d.pos.x + d.pos.z * d.pos.z);
+		if (distXZ > POOL_RADIUS - DUCK_RADIUS)
+		{
+			glm::vec2 normal(-d.pos.x / distXZ, -d.pos.z / distXZ);
+
+			float dot = d.velocity.x * normal.x + d.velocity.y * normal.y;
+			d.velocity.x -= 2.f * dot * normal.x;
+			d.velocity.y -= 2.f * dot * normal.y;
+
+			float overlap = distXZ - (POOL_RADIUS - DUCK_RADIUS);
+			d.pos.x += normal.x * overlap;
+			d.pos.z += normal.y * overlap;
+
+			float wobble = RandRange(-0.3f, 0.3f);
+			float speed = sqrtf(d.velocity.x * d.velocity.x + d.velocity.y * d.velocity.y);
+			float newAngle = atan2f(d.velocity.y, d.velocity.x) + wobble;
+			d.velocity = glm::vec2(cosf(newAngle) * speed, sinf(newAngle) * speed);
+		}
+
+		if (glm::length(d.velocity) > 0.01f)
+			d.facingAngle = glm::degrees(atan2f(d.velocity.x, d.velocity.y));
+	}
+
+	for (int i = 0; i < NUM_DUCKS; ++i)
+	{
+		if (ducks[i].caught) continue;
+		for (int j = i + 1; j < NUM_DUCKS; ++j)
+		{
+			if (ducks[j].caught) continue;
+
+			float dx = ducks[j].pos.x - ducks[i].pos.x;
+			float dz = ducks[j].pos.z - ducks[i].pos.z;
+			float dist = sqrtf(dx * dx + dz * dz);
+			float minDist = DUCK_RADIUS * 2.f;
+
+			if (dist < minDist && dist > 0.001f)
+			{
+				float nx = dx / dist;
+				float nz = dz / dist;
+
+				float overlap = (minDist - dist) * 0.5f;
+				ducks[i].pos.x -= nx * overlap;
+				ducks[i].pos.z -= nz * overlap;
+				ducks[j].pos.x += nx * overlap;
+				ducks[j].pos.z += nz * overlap;
+
+				float vi_n = ducks[i].velocity.x * nx + ducks[i].velocity.y * nz;
+				float vj_n = ducks[j].velocity.x * nx + ducks[j].velocity.y * nz;
+
+				if (vi_n - vj_n > 0.f)
+				{
+					ducks[i].velocity.x += (vj_n - vi_n) * nx;
+					ducks[i].velocity.y += (vj_n - vi_n) * nz;
+					ducks[j].velocity.x += (vi_n - vj_n) * nx;
+					ducks[j].velocity.y += (vi_n - vj_n) * nz;
+				}
+			}
+		}
+	}
+}
 
 void SceneDucks::Update(double dt)
 {
@@ -200,59 +304,56 @@ void SceneDucks::Update(double dt)
 	if (KeyboardController::GetInstance()->IsKeyDown('P'))
 		light[0].position.y += static_cast<float>(dt) * 5.f;
 
-
-	// Store position before camera update
 	glm::vec3 oldPos = camera.position;
-
-	// Update camera position based on input
-	camera.Update(dt);
-
-
-	//  ANIMATION/INTERACTIONS 
-
-
-	duckAngle += duckSpeed * (float)dt;
-	if (duckAngle > glm::two_pi<float>())
-		duckAngle -= glm::two_pi<float>();
+	if (!isTopDown)
+		camera.Update(dt);
 
 	if (catchTimer > 0.f)
-		catchTimer -= (float)dt;
+		catchTimer -= static_cast<float>(dt);
+	if (wrongTimer > 0.f)
+		wrongTimer -= static_cast<float>(dt);
 
-	// Check if hook catches a duck (only while playing)
-	if (gameState == STATE_PLAYING && hookPickedUp)
+	UpdateDucks(static_cast<float>(dt));
+}
+
+void SceneDucks::RenderDucks()
+{
+	for (int i = 0; i < NUM_DUCKS; ++i)
 	{
-		float duckWorldX = duckRadius * glm::cos(duckAngle);
-		float duckWorldZ = duckRadius * glm::sin(duckAngle);
+		const Duck& d = ducks[i];
+		if (d.caught) continue;
 
-		glm::vec3 view = glm::normalize(camera.target - camera.position);
-		glm::vec3 right = glm::normalize(glm::cross(view, glm::vec3(0, 1, 0)));
-		glm::vec3 hookTip = camera.position + view * 2.f + right * 0.5f;
+		modelStack.PushMatrix();
+		modelStack.Translate(d.pos.x, -1.2, d.pos.z);
+		modelStack.Rotate(d.facingAngle, 0.f, 1.f, 0.f);
+		modelStack.Scale(0.01f, 0.01f, 0.01f);
 
-		float dx = hookTip.x - duckWorldX;
-		float dz = hookTip.z - duckWorldZ;
-		float distSq = dx * dx + dz * dz;
+		meshList[GEO_DUCK]->material.kAmbient = glm::vec3(1.0f, 0.8f, 0.0f);
+		meshList[GEO_DUCK]->material.kDiffuse = glm::vec3(1.0f, 0.85f, 0.1f);
+		meshList[GEO_DUCK]->material.kSpecular = glm::vec3(0.4f, 0.35f, 0.1f);
+		meshList[GEO_DUCK]->material.kShininess = 8.f;
+		RenderMesh(meshList[GEO_DUCK], true);
 
-		if (distSq < 1.5f && catchTimer <= 0.f)  // cooldown prevents multi-catch
-		{
-			ducksPickedUp++;
-			catchTimer = 1.5f;
-			if (ducksPickedUp >= MAX_DUCKS)
-				gameState = STATE_WON;
-		}
+		modelStack.PushMatrix();
+		modelStack.Translate(10.f, 28.f, 10.f);
+		modelStack.Scale(2.0f, 2.0f, 2.0f);
+		RenderMesh(meshList[GEO_DUCKLEYE], true);
+		modelStack.PopMatrix();
+
+		modelStack.PushMatrix();
+		modelStack.Translate(10.f, 28.f, -10.f);
+		modelStack.Scale(2.0f, 2.0f, 2.0f);
+		RenderMesh(meshList[GEO_DUCKREYE], true);
+		modelStack.PopMatrix();
+
+		modelStack.PopMatrix();
 	}
-
-	//// ANIMATIONS
-	
-
-
 }
 
 void SceneDucks::Render()
 {
-	// Clear color buffer every frame
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	// Load view matrix stack and set it with camera position, target position and up direction
 	viewStack.LoadIdentity();
 	viewStack.LookAt(
 		camera.position.x, camera.position.y, camera.position.z,
@@ -260,49 +361,43 @@ void SceneDucks::Render()
 		camera.up.x, camera.up.y, camera.up.z
 	);
 
-	// Load identity matrix into the model stack
 	modelStack.LoadIdentity();
 
 	if (light[0].type == Light::LIGHT_DIRECTIONAL)
 	{
-		glm::vec3 lightDir(light[0].position.x, light[0].position.y, light[0].position.z);
-		glm::vec3 lightDirection_cameraspace = viewStack.Top() * glm::vec4(lightDir, 0);
-		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightDirection_cameraspace));
+		glm::vec3 ld(light[0].position.x, light[0].position.y, light[0].position.z);
+		glm::vec3 ldc = viewStack.Top() * glm::vec4(ld, 0);
+		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(ldc));
 	}
 	else if (light[0].type == Light::LIGHT_SPOT)
 	{
-		glm::vec3 lightPosition_cameraspace = viewStack.Top() * glm::vec4(light[0].position, 1);
-		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightPosition_cameraspace));
-		glm::vec3 spotDirection_cameraspace = viewStack.Top() * glm::vec4(light[0].spotDirection, 0);
-		glUniform3fv(m_parameters[U_LIGHT0_SPOTDIRECTION], 1, glm::value_ptr(spotDirection_cameraspace));
+		glm::vec3 lp = viewStack.Top() * glm::vec4(light[0].position, 1);
+		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lp));
+		glm::vec3 sd = viewStack.Top() * glm::vec4(light[0].spotDirection, 0);
+		glUniform3fv(m_parameters[U_LIGHT0_SPOTDIRECTION], 1, glm::value_ptr(sd));
 	}
-	else {
-		// Calculate the light position in camera space
-		glm::vec3 lightPosition_cameraspace = viewStack.Top() * glm::vec4(light[0].position, 1);
-		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightPosition_cameraspace));
+	else
+	{
+		glm::vec3 lp = viewStack.Top() * glm::vec4(light[0].position, 1);
+		glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lp));
 	}
 
 	modelStack.PushMatrix();
-	// Render objects
 	RenderMesh(meshList[GEO_AXES], false);
 	modelStack.PopMatrix();
 
 	modelStack.PushMatrix();
-	// Render light
 	modelStack.Translate(light[0].position.x, light[0].position.y, light[0].position.z);
 	modelStack.Scale(0.1f, 0.1f, 0.1f);
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
 
-	// ---- BOOTH ----
-	modelStack.PushMatrix();                        // >>> BOOTH ROOT
-	modelStack.Translate(0.f, 0.f, 0.f);           // adjust if needed
+	modelStack.PushMatrix();
 
 	// FLOOR
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, -2.0f, 0.f);
 	modelStack.Scale(5.f, 2.f, 5.0f);
-
 	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
 	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
 	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -312,7 +407,8 @@ void SceneDucks::Render()
 
 	// CEILING
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 6.f, 0.f);
+	modelStack.Translate(0.f, 6.f, 4.7f);
+	modelStack.Scale(1.02f, 0.9f, 1.7f);
 	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
 	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
 	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
@@ -333,89 +429,268 @@ void SceneDucks::Render()
 
 	// LEFT WALL
 	modelStack.PushMatrix();
-	modelStack.Translate(-10.f, 2.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
+	modelStack.Translate(-10.f, 2.f, 5.f);
+	modelStack.Scale(0.3f, 8.f, 25.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
 	// RIGHT WALL
 	modelStack.PushMatrix();
-	modelStack.Translate(10.f, 2.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
+	modelStack.Translate(10.f, 2.f, 5.f);
+	modelStack.Scale(0.3f, 8.f, 25.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
-	//// COUNTER
-	//modelStack.PushMatrix();
-	//modelStack.Translate(0.f, 0.5f, 1.5f);
-	//meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
-	//meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
-	//meshList[GEO_COUNTER]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
-	//meshList[GEO_COUNTER]->material.kShininess = 8.f;
-	//RenderMesh(meshList[GEO_COUNTER], true);
-	//modelStack.PopMatrix();
+	//back wall L
+	modelStack.PushMatrix();
+	modelStack.Translate(5.5f, 1.5f, 17.5f);
+	modelStack.Scale(9.f, 9.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//back wall R
+	modelStack.PushMatrix();
+	modelStack.Translate(-5.5f, 1.5f, 17.5f);
+	modelStack.Scale(9.f, 9.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//door frame
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 3.8f, 17.5f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.29f, 4.24f, 3.9f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//render main door
+	modelStack.PushMatrix();
+	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
+	modelStack.Rotate(door[0].rotation, 0, 1, 0);
+	modelStack.Rotate(180, 0, 1, 0);
+	modelStack.Translate(0, 0.f, -17.5f);
+	modelStack.Scale(door[0].width * 1.35, door[0].height * 1.48, 0.2f);
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_DOOR], true);
+	modelStack.PopMatrix();
 
 	// POOL
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, -1.5f, 0.f);
-	modelStack.Scale(0.2f, 0.2f, 0.2f);         
-	RenderMesh(meshList[GEO_POOL], true);
+	modelStack.Scale(0.2f, 0.2f, 0.2f);
 	meshList[GEO_POOL]->material.kAmbient = glm::vec3(0.1f, 0.2f, 0.3f);
 	meshList[GEO_POOL]->material.kDiffuse = glm::vec3(0.2f, 0.5f, 0.8f);
 	meshList[GEO_POOL]->material.kSpecular = glm::vec3(0.3f, 0.5f, 0.7f);
 	meshList[GEO_POOL]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_POOL], true);
 
-
-	// In Render()
+	// WATER SURFACE
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 1.0f, 0.f);   // just above floor
-	modelStack.Scale(18.f, 1.f, 18.f);          // stretch to pool size
-	//modelStack.Rotate(0.f, 0.f, 90.f, 0.f);         
+	modelStack.Translate(0.f, 1.0f, 0.f);
+	modelStack.Scale(18.f, 1.f, 18.f);
 	meshList[GEO_WATER]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
 	meshList[GEO_WATER]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
-	meshList[GEO_WATER]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);  // high specularity = shiny
-	meshList[GEO_WATER]->material.kShininess = 64.f;                          // glossy look
+	meshList[GEO_WATER]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);
+	meshList[GEO_WATER]->material.kShininess = 64.f;
 	RenderMesh(meshList[GEO_WATER], true);
 	modelStack.PopMatrix();
 
-	// DUCK
-	modelStack.PushMatrix();
-
-	// Circle position using sin/cos
-	float duckX = duckRadius * glm::cos(duckAngle);
-	float duckZ = duckRadius * glm::sin(duckAngle);
-	modelStack.Translate(duckX, 1.5f, duckZ);
-
-	// Face the direction of movement (tangent to circle)
-	float facingAngle = glm::degrees(duckAngle) + 90.f;
-	modelStack.Rotate(facingAngle, 0.f, 1.f, 0.f);
-
-	modelStack.Scale(0.07f, 0.07f, 0.07f);
-	meshList[GEO_DUCK]->material.kAmbient = glm::vec3(1.0f, 0.8f, 0.0f);
-	meshList[GEO_DUCK]->material.kDiffuse = glm::vec3(1.0f, 0.85f, 0.1f);
-	meshList[GEO_DUCK]->material.kSpecular = glm::vec3(0.4f, 0.35f, 0.1f);
-	meshList[GEO_DUCK]->material.kShininess = 8.f;
-	RenderMesh(meshList[GEO_DUCK], true);
-
-	modelStack.PushMatrix();
-	modelStack.Translate(10.f, 28.f, 10.f);
-	modelStack.Scale(2.0f, 2.0f, 2.0f);
-	RenderMesh(meshList[GEO_DUCKLEYE], true);
-	modelStack.PopMatrix();
-
-	modelStack.PushMatrix();
-	modelStack.Translate(10.f, 28.f, -10.f);
-	modelStack.Scale(2.0f, 2.0f, 2.0f);
-	RenderMesh(meshList[GEO_DUCKREYE], true);
-	modelStack.PopMatrix();
-
-	modelStack.PopMatrix(); //DUCK ROOT
-
 	modelStack.PopMatrix(); // POOL ROOT
 
-	modelStack.PopMatrix();                         // <<< BOOTH ROOT
-	
-	// Hook on floor (only before pickup)
+	RenderDucks();
+
+	modelStack.PopMatrix(); // BOOTH ROOT
+
+	// BALLOON
+	modelStack.PushMatrix();
+	modelStack.Translate(7.f, 1.0f, -6.f);
+	modelStack.Scale(0.4f, 0.4f, 0.4f);
+	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+	RenderMesh(meshList[GEO_BALLOON], true);
+	modelStack.PopMatrix();
+
+	// BALLOON
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.f, 1.0f, -6.f);
+	modelStack.Scale(0.4f, 0.4f, 0.4f);
+	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+	RenderMesh(meshList[GEO_BALLOON], true);
+	modelStack.PopMatrix();
+
+	// BALLOON
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 1.0f, -6.f);
+	modelStack.Scale(0.4f, 0.4f, 0.4f);
+	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.4f, 0.0f, 0.0f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(1.0f, 0.1f, 0.1f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(1.0f, 0.8f, 0.8f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+	RenderMesh(meshList[GEO_BALLOON], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(8.6f, -1.85f, 7.f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(7.5f, -1.85f, 10.6f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(-73.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(7.5f, 0.8f, 8.6f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(113.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE1
+	modelStack.PushMatrix();
+	modelStack.Translate(6.5f, -1.8f, 8.2f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE1]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_CRATE1]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_CRATE1]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_CRATE1]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_CRATE1], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.6f, -1.85f, 12.f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.5f, -1.85f, 15.6f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(-73.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.5f, 0.8f, 13.6f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(113.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE1
+	modelStack.PushMatrix();
+	modelStack.Translate(-6.5f, -1.8f, 12.9f);
+	modelStack.Scale(3.0f, 3.0f, 3.0f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE1]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_CRATE1]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_CRATE1]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_CRATE1]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_CRATE1], true);
+	modelStack.PopMatrix();
+
+	// TABLE
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.2f, -0.5f, 2.2f);
+	modelStack.Scale(0.025f, 0.025f, 0.025f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	meshList[GEO_DUCKTABLE]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_DUCKTABLE]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_DUCKTABLE]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_DUCKTABLE]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_DUCKTABLE], true);
+	modelStack.PopMatrix();
+
+	// Toy train
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.2f, 0.75f, 4.2f);
+	modelStack.Scale(0.04f, 0.04f, 0.04f);
+	modelStack.Rotate(156.f, 0.f, 1.f, 0.f);
+	meshList[GEO_TOYTRAIN]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_TOYTRAIN]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_TOYTRAIN]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_TOYTRAIN]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_TOYTRAIN], true);
+	modelStack.PopMatrix();
+
+	// Toy plane
+	modelStack.PushMatrix();
+	modelStack.Translate(-9.2f, 0.75f, 2.8f);
+	modelStack.Scale(0.03f, 0.03f, 0.03f);
+	modelStack.Rotate(230.f, 0.f, 1.f, 0.f);
+	meshList[GEO_TOYPLANE]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_TOYPLANE]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_TOYPLANE]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_TOYPLANE]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_TOYPLANE], true);
+	modelStack.PopMatrix();
+
+	// Basketball
+	modelStack.PushMatrix();
+	modelStack.Translate(-7.2f, 1.1f, 0.8f);
+	modelStack.Scale(3.03f, 3.03f, 3.03f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	meshList[GEO_DUCKBASKETBALL]->material.kAmbient = glm::vec3(0.35f, 0.22f, 0.1f);
+	meshList[GEO_DUCKBASKETBALL]->material.kDiffuse = glm::vec3(0.7f, 0.45f, 0.2f);
+	meshList[GEO_DUCKBASKETBALL]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
+	meshList[GEO_DUCKBASKETBALL]->material.kShininess = 12.f;
+	RenderMesh(meshList[GEO_DUCKBASKETBALL], true);
+	modelStack.PopMatrix();
+
 	if (!hookPickedUp)
 	{
 		modelStack.PushMatrix();
@@ -429,7 +704,6 @@ void SceneDucks::Render()
 		modelStack.PopMatrix();
 	}
 
-	// Hook held in hand (only after pickup) — camera basis method
 	if (hookPickedUp)
 	{
 		glm::vec3 view = glm::normalize(camera.target - camera.position);
@@ -467,7 +741,7 @@ void SceneDucks::Render()
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
 			"Find the hook!", glm::vec3(1, 1, 0), 30.f, 90.f, 540.f);
-		if (IsPlayerNearHook(2.5f))
+		if (IsPlayerNearHook(5.0f))
 			RenderTextOnScreen(meshList[GEO_TEXT],
 				"[F] Pick up Hook", glm::vec3(1, 1, 1), 35.f, 300.f, 480.f);
 	}
@@ -476,11 +750,25 @@ void SceneDucks::Render()
 		char buf[32];
 		sprintf_s(buf, "Ducks: %d / %d", ducksPickedUp, MAX_DUCKS);
 		RenderTextOnScreen(meshList[GEO_TEXT], buf, glm::vec3(1, 1, 1), 30.f, 30.f, 560.f);
-		RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
+
+		if (!isTopDown && IsPlayerNearPool(7.f))
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"[E] Play Duck Game", glm::vec3(1, 1, 0), 30.f, 230.f, 480.f);
+
+		if (isTopDown)
+		{
+			RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"[E] Exit Duck Game", glm::vec3(1, 1, 0), 30.f, 230.f, 540.f);
+		}
 
 		if (catchTimer > 0.f)
 			RenderTextOnScreen(meshList[GEO_TEXT],
 				"GOT ONE!", glm::vec3(0, 1, 0), 50.f, 300.f, 400.f);
+
+		if (wrongTimer > 0.f)
+			RenderTextOnScreen(meshList[GEO_TEXT],
+				"WRONG DUCK!", glm::vec3(1, 0, 0), 50.f, 260.f, 400.f);
 	}
 	if (gameState == STATE_WON)
 	{
@@ -489,32 +777,21 @@ void SceneDucks::Render()
 		RenderTextOnScreen(meshList[GEO_TEXT],
 			"[R] Return to Lobby", glm::vec3(1, 1, 0), 30.f, 220.f, 340.f);
 	}
-
-	// render tests
-
-
-	// Skybox NIGHT
-	//RenderSkybox();
-
-
-
 }
 
 void SceneDucks::RenderMesh(Mesh* mesh, bool enableLight)
 {
-	glm::mat4 MVP, modelView, modelView_inverse_transpose;
-
-	MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top();
+	glm::mat4 MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top();
 	glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE, glm::value_ptr(MVP));
-	modelView = viewStack.Top() * modelStack.Top();
+
+	glm::mat4 modelView = viewStack.Top() * modelStack.Top();
 	glUniformMatrix4fv(m_parameters[U_MODELVIEW], 1, GL_FALSE, glm::value_ptr(modelView));
+
 	if (enableLight)
 	{
 		glUniform1i(m_parameters[U_LIGHTENABLED], 1);
-		modelView_inverse_transpose = glm::inverseTranspose(modelView);
-		glUniformMatrix4fv(m_parameters[U_MODELVIEW_INVERSE_TRANSPOSE], 1, GL_FALSE, glm::value_ptr(modelView_inverse_transpose));
-
-		//load material
+		glm::mat4 mit = glm::inverseTranspose(modelView);
+		glUniformMatrix4fv(m_parameters[U_MODELVIEW_INVERSE_TRANSPOSE], 1, GL_FALSE, glm::value_ptr(mit));
 		glUniform3fv(m_parameters[U_MATERIAL_AMBIENT], 1, &mesh->material.kAmbient.r);
 		glUniform3fv(m_parameters[U_MATERIAL_DIFFUSE], 1, &mesh->material.kDiffuse.r);
 		glUniform3fv(m_parameters[U_MATERIAL_SPECULAR], 1, &mesh->material.kSpecular.r);
@@ -524,7 +801,6 @@ void SceneDucks::RenderMesh(Mesh* mesh, bool enableLight)
 	{
 		glUniform1i(m_parameters[U_LIGHTENABLED], 0);
 	}
-
 
 	if (mesh->textureID > 0)
 	{
@@ -540,30 +816,12 @@ void SceneDucks::RenderMesh(Mesh* mesh, bool enableLight)
 
 	mesh->Render();
 
-
-
 	if (mesh->textureID > 0)
-	{
 		glBindTexture(GL_TEXTURE_2D, 0);
-	}
-
 }
 
-
-void SceneDucks::RenderSkybox() {
-	modelStack.PushMatrix();
-
-	// Offset in Z direction by -50 units
-	modelStack.Translate(0.f, 0.f, -50.f);
-
-	// Skybox should be rendered without light
-	RenderMesh(meshList[GEO_FRONT], false);
-	modelStack.PopMatrix();
-
-	// Do the rest of the quads with
-	// appropriate positions and rotations
-	// so that the camera is inside the skybox
-
+void SceneDucks::RenderSkybox()
+{
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, 0.f, -50.f);
 	RenderMesh(meshList[GEO_FRONT], false);
@@ -599,174 +857,32 @@ void SceneDucks::RenderSkybox() {
 	modelStack.Rotate(-90.f, 1.f, 0.f, 0.f);
 	RenderMesh(meshList[GEO_BOTTOM], false);
 	modelStack.PopMatrix();
-
 }
 
-
-
-void SceneDucks::RenderMeshOnScreen(Mesh* mesh, float x, float
-	y, float sizex, float sizey)
+void SceneDucks::RenderMeshOnScreen(Mesh* mesh, float x, float y, float sx, float sy)
 {
 	glDisable(GL_DEPTH_TEST);
-	glm::mat4 ortho = glm::ortho(0.f, 1920.f, 0.f, 1080.f, -1000.f, 1000.f); // dimension of screen UI
+	glm::mat4 ortho = glm::ortho(0.f, 1920.f, 0.f, 1080.f, -1000.f, 1000.f);
 	projectionStack.PushMatrix();
 	projectionStack.LoadMatrix(ortho);
-
 	viewStack.PushMatrix();
-	viewStack.LoadIdentity(); //No need camera for ortho mode
-
+	viewStack.LoadIdentity();
 	modelStack.PushMatrix();
 	modelStack.LoadIdentity();
-
-	// To do: Use modelStack to position GUI on screen
 	modelStack.Translate(x, y, 0);
-
-	// To do: Use modelStack to scale the GUI
-	modelStack.Scale(sizex, sizey, 1);
-
-	RenderMesh(mesh, false); //UI should not have light
+	modelStack.Scale(sx, sy, 1);
+	RenderMesh(mesh, false);
 	projectionStack.PopMatrix();
 	viewStack.PopMatrix();
 	modelStack.PopMatrix();
-
 	glEnable(GL_DEPTH_TEST);
 }
 
-
-
-
-
-
-void SceneDucks::Exit()
+void SceneDucks::RenderText(Mesh* mesh, std::string text, glm::vec3 color)
 {
-	// Cleanup VBO here
-	for (int i = 0; i < NUM_GEOMETRY; ++i)
-	{
-		if (meshList[i])
-		{
-			delete meshList[i];
-		}
-	}
-	glDeleteVertexArrays(1, &m_vertexArrayID);
-	glDeleteProgram(m_programID);
-}
-
-void SceneDucks::HandleKeyPress()
-{
-	if (KeyboardController::GetInstance()->IsKeyPressed(0x31))
-	{
-		// Key press to enable culling
-		glEnable(GL_CULL_FACE);
-	}
-	if (KeyboardController::GetInstance()->IsKeyPressed(0x32))
-	{
-		// Key press to disable culling
-		glDisable(GL_CULL_FACE);
-	}
-	if (KeyboardController::GetInstance()->IsKeyPressed(0x33))
-	{
-		// Key press to enable fill mode for the polygon
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); //default fill mode
-	}
-	if (KeyboardController::GetInstance()->IsKeyPressed(0x34))
-	{
-		// Key press to enable wireframe mode for the polygon
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); //wireframe mode
-	}
-
-	if (KeyboardController::GetInstance()->IsKeyPressed(VK_SPACE))
-	{
-		// Change to black background
-		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
-	}
-
-	if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_0))
-	{
-		// Toggle light on or off
-	/*	enableLight = !enableLight;*/
-
-		if (light[0].power <= 0.1f)
-			light[0].power = 1.f;
-		else
-			light[0].power = 0.1f;
-		glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
-	}
-
-	if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_TAB))
-	{
-		if (light[0].type == Light::LIGHT_POINT) {
-			light[0].type = Light::LIGHT_DIRECTIONAL;
-		}
-		else if (light[0].type == Light::LIGHT_DIRECTIONAL) {
-			light[0].type = Light::LIGHT_SPOT;
-		}
-		else {
-			light[0].type = Light::LIGHT_POINT;
-		}
-
-		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
-	}
-
-	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
-	{
-		if (gameState == STATE_FIND_HOOK && IsPlayerNearHook(2.5f))
-		{
-			hookPickedUp = true;
-			gameState = STATE_PLAYING;
-		}
-	}
-
-	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
-	{
-		if (gameState == STATE_WON)
-			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
-	}
-
-}
-
-void SceneDucks::HandleMouseInput() {
-	static bool isLeftUp = false;
-	static bool isRightUp = false;
-
-	// Process Left button
-	if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = true;
-		std::cout << "LBUTTON DOWN" << std::endl;
-
-		// transform into UI space
-		double x = MouseController::GetInstance()->GetMousePositionX();
-		double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
-
-		// Check if mouse click position is within the GUI box
-		// Change the boundaries as necessary
-		if (x > 0 && x < 100 && y > 0 && y < 100) {
-			std::cout << "GUI IS CLICKED" << std::endl;
-		}
-
-	}
-	else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = false;
-		std::cout << "LBUTTON UP" << std::endl;
-	}
-
-	// Continue to do for right button
-}
-
-
-
-void SceneDucks::RenderText(Mesh* mesh, std::string text, glm::vec3
-	color)
-{
-	if (!mesh || mesh->textureID <= 0) //Proper error check
-		return;
-
-	// Enable blending
+	if (!mesh || mesh->textureID <= 0) return;
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-
-	// Disable back face culling
 	glDisable(GL_CULL_FACE);
 	glUniform1i(m_parameters[U_TEXT_ENABLED], 1);
 	glUniform3fv(m_parameters[U_TEXT_COLOR], 1, &color.r);
@@ -775,16 +891,11 @@ void SceneDucks::RenderText(Mesh* mesh, std::string text, glm::vec3
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mesh->textureID);
 	glUniform1i(m_parameters[U_COLOR_TEXTURE], 0);
-
 	for (unsigned i = 0; i < text.length(); ++i)
 	{
-		glm::mat4 characterSpacing = glm::translate(
-			glm::mat4(1.f),
-			glm::vec3(i * 1.0f, 0, 0));
-		glm::mat4 MVP = projectionStack.Top() * viewStack.Top() *
-			modelStack.Top() * characterSpacing;
-		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE,
-			glm::value_ptr(MVP));
+		glm::mat4 cs = glm::translate(glm::mat4(1.f), glm::vec3(i * 1.0f, 0, 0));
+		glm::mat4 MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top() * cs;
+		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE, glm::value_ptr(MVP));
 		mesh->Render((unsigned)text[i] * 6, 6);
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -793,30 +904,22 @@ void SceneDucks::RenderText(Mesh* mesh, std::string text, glm::vec3
 	glDisable(GL_BLEND);
 }
 
-
-
-void SceneDucks::RenderTextOnScreen(Mesh* mesh, std::string
-	text, glm::vec3 color, float size, float x, float y)
+void SceneDucks::RenderTextOnScreen(Mesh* mesh, std::string text,
+	glm::vec3 color, float size, float x, float y)
 {
-	if (!mesh || mesh->textureID <= 0) //Proper error check
-		return;
-
-	// Enable blending
+	if (!mesh || mesh->textureID <= 0) return;
 	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glDisable(GL_DEPTH_TEST);
-	glm::mat4 ortho = glm::ortho(0.f, 800.f, 0.f, 600.f, -100.f, 100.f); // dimension of screen UI
-
+	glm::mat4 ortho = glm::ortho(0.f, 800.f, 0.f, 600.f, -100.f, 100.f);
 	projectionStack.PushMatrix();
 	projectionStack.LoadMatrix(ortho);
 	viewStack.PushMatrix();
-	viewStack.LoadIdentity(); //No need camera for ortho mode 
-
+	viewStack.LoadIdentity();
 	modelStack.PushMatrix();
-	modelStack.LoadIdentity(); //Reset modelStack
+	modelStack.LoadIdentity();
 	modelStack.Translate(x, y, 0);
 	modelStack.Scale(size, size, size);
-
 	glUniform1i(m_parameters[U_TEXT_ENABLED], 1);
 	glUniform3fv(m_parameters[U_TEXT_COLOR], 1, &color.r);
 	glUniform1i(m_parameters[U_LIGHTENABLED], 0);
@@ -824,18 +927,11 @@ void SceneDucks::RenderTextOnScreen(Mesh* mesh, std::string
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, mesh->textureID);
 	glUniform1i(m_parameters[U_COLOR_TEXTURE], 0);
-
-
 	for (unsigned i = 0; i < text.length(); ++i)
 	{
-		glm::mat4 characterSpacing = glm::translate(
-			glm::mat4(1.f),
-			glm::vec3(0.5f + i * 1.0f, 0.5f, 0)
-		);
-		glm::mat4 MVP = projectionStack.Top() *
-			viewStack.Top() * modelStack.Top() * characterSpacing;
-		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE,
-			glm::value_ptr(MVP));
+		glm::mat4 cs = glm::translate(glm::mat4(1.f), glm::vec3(0.5f + i * 1.0f, 0.5f, 0));
+		glm::mat4 MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top() * cs;
+		glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE, glm::value_ptr(MVP));
 		mesh->Render((unsigned)text[i] * 6, 6);
 	}
 	glBindTexture(GL_TEXTURE_2D, 0);
@@ -845,4 +941,230 @@ void SceneDucks::RenderTextOnScreen(Mesh* mesh, std::string
 	modelStack.PopMatrix();
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
+}
+
+void SceneDucks::Exit()
+{
+	for (int i = 0; i < NUM_GEOMETRY; ++i)
+		if (meshList[i]) delete meshList[i];
+	glDeleteVertexArrays(1, &m_vertexArrayID);
+	glDeleteProgram(m_programID);
+}
+
+void SceneDucks::HandleKeyPress()
+{
+	if (KeyboardController::GetInstance()->IsKeyPressed(0x31))
+		glEnable(GL_CULL_FACE);
+	if (KeyboardController::GetInstance()->IsKeyPressed(0x32))
+		glDisable(GL_CULL_FACE);
+	if (KeyboardController::GetInstance()->IsKeyPressed(0x33))
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (KeyboardController::GetInstance()->IsKeyPressed(0x34))
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	if (KeyboardController::GetInstance()->IsKeyPressed(VK_SPACE))
+		glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+
+	if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_0))
+	{
+		light[0].power = (light[0].power <= 0.1f) ? 1.f : 0.1f;
+		glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
+	}
+
+	if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_TAB))
+	{
+		if (light[0].type == Light::LIGHT_POINT)             light[0].type = Light::LIGHT_DIRECTIONAL;
+		else if (light[0].type == Light::LIGHT_DIRECTIONAL)  light[0].type = Light::LIGHT_SPOT;
+		else                                                  light[0].type = Light::LIGHT_POINT;
+		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
+	}
+
+	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		if (gameState == STATE_FIND_HOOK && IsPlayerNearHook(5.0f))
+		{
+			hookPickedUp = true;
+			gameState = STATE_PLAYING;
+		}
+	}
+
+	// E  enter/exit top-down pool view (only when holding hook and near pool)
+	if (KeyboardController::GetInstance()->IsKeyPressed('E'))
+	{
+		if (!isTopDown && hookPickedUp && IsPlayerNearPool(7.f))
+		{
+			savedCamPos = camera.position;
+			savedCamTarget = camera.target;
+			savedCamUp = camera.up;
+
+			camera.position = glm::vec3(0.f, 6.0f, 0.f);
+			camera.target = glm::vec3(0.f, 0.f, 0.f);
+			camera.up = glm::vec3(0.f, 0.f, -1.f);
+
+			isTopDown = true;
+
+			// Show cursor so player can click ducks
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+		}
+		else if (isTopDown)
+		{
+			camera.position = savedCamPos;
+			camera.target = savedCamTarget;
+			camera.up = savedCamUp;
+
+			isTopDown = false;
+
+			// Re-hide cursor for FP mode
+			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		}
+	}
+
+	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
+	{
+		if (gameState == STATE_WON)
+		{
+			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
+			// Reset all game state to default
+			gameState = STATE_FIND_HOOK;
+			hookPickedUp = false;
+			ducksPickedUp = 0;
+			catchTimer = 0.f;
+			wrongTimer = 0.f;
+
+			// Re-randomise ducks properly
+			InitDucks();
+
+			// Restore FP camera to starting position
+			camera.Init(
+				glm::vec3(0, 2.1f, 10),
+				glm::vec3(0, 2, 0),
+				glm::vec3(0, 1.0f, 0)
+			);
+
+			// Exit top-down mode if active and re-hide cursor
+			if (isTopDown)
+			{
+				isTopDown = false;
+				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			}
+		}
+		else
+		{
+			// Reset all game state to default
+			gameState = STATE_FIND_HOOK;
+			hookPickedUp = false;
+			ducksPickedUp = 0;
+			catchTimer = 0.f;
+			wrongTimer = 0.f;
+
+			// Re-randomise ducks properly
+			InitDucks();
+
+			// Restore FP camera to starting position
+			camera.Init(
+				glm::vec3(0, 2.1f, 10),
+				glm::vec3(0, 2, 0),
+				glm::vec3(0, 1.0f, 0)
+			);
+
+			// Exit top-down mode if active and re-hide cursor
+			if (isTopDown)
+			{
+				isTopDown = false;
+				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+			}
+		}
+	}
+}
+
+void SceneDucks::HandleMouseInput()
+{
+	static bool wasLeftDown = false;
+	bool isLeftDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+
+	// Only process a fresh click (not held)
+	if (isLeftDown && !wasLeftDown)
+	{
+		// Only do duck picking while in top-down mode
+		if (isTopDown && gameState == STATE_PLAYING)
+		{
+			// Get raw mouse position (pixels, top-left origin)
+			double mx = MouseController::GetInstance()->GetMousePositionX();
+			double my = MouseController::GetInstance()->GetMousePositionY();
+
+			// Convert to NDC [-1, 1]
+			float ndcX = (static_cast<float>(mx) / 1920.f) * 2.f - 1.f;
+			float ndcY = 1.f - (static_cast<float>(my) / 1080.f) * 2.f;
+
+			// Unproject through inverse VP to get world-space ray direction
+			glm::mat4 proj = projectionStack.Top();
+			glm::mat4 view = viewStack.Top();
+			glm::mat4 invVP = glm::inverse(proj * view);
+
+			// Near and far points in clip space
+			glm::vec4 nearClip(ndcX, ndcY, -1.f, 1.f);
+			glm::vec4 farClip(ndcX, ndcY, 1.f, 1.f);
+
+			glm::vec4 nearWorld = invVP * nearClip;
+			glm::vec4 farWorld = invVP * farClip;
+			nearWorld /= nearWorld.w;
+			farWorld /= farWorld.w;
+
+			glm::vec3 rayOrigin(nearWorld);
+			glm::vec3 rayDir = glm::normalize(glm::vec3(farWorld) - rayOrigin);
+
+			// Plane: y = -1.2   t = (-1.2 - rayOrigin.y) / rayDir.y
+			float planeY = -1.2f;
+			float hitX = 0.f, hitZ = 0.f;
+			bool  validHit = false;
+
+			if (fabsf(rayDir.y) > 0.0001f)
+			{
+				float t = (planeY - rayOrigin.y) / rayDir.y;
+				if (t > 0.f)
+				{
+					hitX = rayOrigin.x + rayDir.x * t;
+					hitZ = rayOrigin.z + rayDir.z * t;
+					validHit = true;
+				}
+			}
+
+			if (validHit)
+			{
+				// Duck collision radius in world space (duck is scaled 0.01,
+				// so a click-zone of ~0.4 world units feels natural)
+				const float CLICK_RADIUS = 0.4f;
+
+				for (int i = 0; i < NUM_DUCKS; ++i)
+				{
+					Duck& d = ducks[i];
+					if (d.caught) continue;
+
+					float dx = hitX - d.pos.x;
+					float dz = hitZ - d.pos.z;
+					float distSq = dx * dx + dz * dz;
+
+					if (distSq <= CLICK_RADIUS * CLICK_RADIUS)
+					{
+						// Hit! Check if it's a correct duck
+						if (d.isCorrect)
+						{
+							d.caught = true;
+							ducksPickedUp++;
+							catchTimer = 1.5f;   // "GOT ONE!" flash
+
+							if (ducksPickedUp >= MAX_DUCKS)
+								gameState = STATE_WON;
+						}
+						else
+						{
+							wrongTimer = 1.5f;   // "WRONG DUCK!" flash
+						}
+						break; // only one duck per click
+					}
+				}
+			}
+		}
+	}
+
+	wasLeftDown = isLeftDown;
 }
