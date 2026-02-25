@@ -148,6 +148,8 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
     "TargetRail", glm::vec3(0.6f, 0.6f, 0.65f),  // gunmetal grey
     12, 0.12f, 18.f);
 
+// Door
+meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
 
 
 
@@ -155,11 +157,15 @@ meshList[GEO_TARGET_RAIL] = MeshBuilder::GenerateCylinder(
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
-
+	// Player collision box size (width, height, depth)
+	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
 	
 	
 	// ANIMATIONS
+
+	//initialise door 
+	door[0] = { glm::vec3(1.f, 2.f, 7.5f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
 	
 	// ---------- Game state ----------
 	gameState = STATE_FIND_GUN;
@@ -302,6 +308,29 @@ void SceneShooting::Update(double dt)
 
 
 	// === ANIMATION/INTERACTIONS ====
+	//Door interaction
+	showInteractPrompt = false;
+	if (door[0].IsPlayerNear(camera.position, 2.5f))
+	{
+		if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_SHOOTING))
+			showInteractPrompt = true;
+
+		else
+			RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 50, 50);
+	}
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		door[0].Open();
+	}
+
+	if (door[0].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
+	{
+		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
+		door[0].Close();
+		showInteractPrompt = false;
+	}
+
+	
 	// --- STATE_FIND_GUN: just let player walk around ---
 	if (gameState == STATE_FIND_GUN)
 	{
@@ -538,6 +567,8 @@ void SceneShooting::Render()
 	// ---- FLOOR ----
 	modelStack.PushMatrix();                    // >>> Floor
 	modelStack.Translate(0.f, 0.f, 0.f);
+	modelStack.Scale(20.f, 1.f, 15.f);
+
 	meshList[GEO_FLOOR]->material.kAmbient = glm::vec3(0.3f, 0.2f, 0.1f);
 	meshList[GEO_FLOOR]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.2f);
 	meshList[GEO_FLOOR]->material.kSpecular = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -579,6 +610,53 @@ void SceneShooting::Render()
 	modelStack.Scale(0.3f, 8.f, 15.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                     // <<< Right Wall
+
+	// --- FRONT WALL ---
+	//front wall L
+	modelStack.PushMatrix();
+	modelStack.Translate(5.5f, 4.f, 7.5f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//front wall R
+	modelStack.PushMatrix();
+	modelStack.Translate(-5.5f, 4.f, 7.5f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+	meshList[GEO_WALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_WALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_WALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_WALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//door frame
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 5.9f, 7.5f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	modelStack.Scale(0.3f, 4.25f, 4.f);
+
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	//render main door
+	modelStack.PushMatrix();
+	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
+	modelStack.Rotate(door[0].rotation, 0, 1, 0);
+	modelStack.Rotate(180, 0, 1, 0);
+	modelStack.Translate(door[0].width * 0.5f, 0.f, 0.f);
+	modelStack.Scale(door[0].width, door[0].height, 0.2f);
+
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	RenderMesh(meshList[GEO_DOOR], true);
+	modelStack.PopMatrix();
 
 
 	// ------------------------------------------------------------------

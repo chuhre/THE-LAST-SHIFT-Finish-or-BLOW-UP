@@ -10,6 +10,7 @@
 #include <string>
 #include "PhysicsObject.h"
 #include "CollisionDetection.h"
+#include "Door.h"
 
 class SceneShooting : public Scene
 {
@@ -34,6 +35,7 @@ public:
 		GEO_FLOOR,
 		GEO_WALL,
 		GEO_CEILING,
+		GEO_DOOR,
 
 		// Props
 		GEO_COUNTER,        // barrier between player and targets
@@ -154,10 +156,17 @@ private:
 
 	// ----- game logic helpers -----------------------------
 	void Shoot();
-	bool RayHitTarget(int index);       // hitscan from camera through crosshair
 	void ResetGame();
 	bool IsPlayerNearGun(float radius);
 	bool IsPlayerNearBooth(float radius);
+
+	// Collision detection
+	glm::vec3 playerSize;
+
+	// door
+	static const int NUM_DOORS = 2;
+	Door door[NUM_DOORS];
+	bool showInteractPrompt;
 
 	// ----- GL handles -------------------------------------
 	unsigned m_vertexArrayID;
