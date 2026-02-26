@@ -1062,18 +1062,14 @@ void SceneTank::Render()
 				glm::vec3(1, 0.3f, 0.3f), 30, 120, 60);
 		}
 
-		if (ballState == THROWN)
-			RenderTextOnScreen(meshList[GEO_TEXT], "Ball in flight!",
-				glm::vec3(0.3f, 1.f, 0.3f), 30, 200, 100);
-	
 	}
 
 	if (gameState == STATE_LOST)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT], "Time's up! Bomb exploded!",
-			glm::vec3(1.f, 0.f, 0.f), 25, 150, 300);
+			glm::vec3(1.f, 0.f, 0.f), 25, 120, 300);
 		RenderTextOnScreen(meshList[GEO_TEXT], "[R] Try Again",
-			glm::vec3(1.f, 1.f, 0.f), 25, 250, 250);
+			glm::vec3(1.f, 1.f, 0.f), 25, 230, 250);
 	}
 
 	if (gameState == STATE_WON)
