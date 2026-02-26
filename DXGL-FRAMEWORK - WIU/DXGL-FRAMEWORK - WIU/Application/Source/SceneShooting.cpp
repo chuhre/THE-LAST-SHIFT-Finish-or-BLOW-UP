@@ -92,7 +92,7 @@ void SceneShooting::Init()
 
 	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 10000.f, 10000.f, 10000.f);
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
-	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.f, 0.f, 0.f), 1.f);
+	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Cube", glm::vec3(0.f, 0.f, 0.f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 
 
