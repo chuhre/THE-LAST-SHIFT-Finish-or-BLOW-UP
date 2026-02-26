@@ -167,7 +167,13 @@ void SceneCans::Init()
 	glUniform1f(m_parameters[U_LIGHT0_KL], light[0].kL);
 	glUniform1f(m_parameters[U_LIGHT0_KQ], light[0].kQ);
 	glUniform1f(m_parameters[U_LIGHT0_COSCUTOFF], cosf(glm::radians<float>(light[0].cosCutoff)));
-	glUniform1f(m_parameters[U_LIGHT0_COSINNER], cosf(glm::radians<float>(light[0].cosInner)));
+	glUniform1f(m_parameters[U_LIGHT0_COSINNER], cosf(glm::radians<float>(light[0].cosInner)));\
+
+	glm::vec3 lightPos_cs = viewStack.Top() * glm::vec4(light[0].position, 1);
+	glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightPos_cs));
+	glm::vec3 spotDir_cs = viewStack.Top() * glm::vec4(light[0].spotDirection, 0);
+	glUniform3fv(m_parameters[U_LIGHT0_SPOTDIRECTION], 1, glm::value_ptr(spotDir_cs));
+
 	glUniform1f(m_parameters[U_LIGHT0_EXPONENT], light[0].exponent);
 
 	enableLight = true;
@@ -639,6 +645,19 @@ void SceneCans::Render()
 			RenderMesh(meshList[GEO_BALL], true);
 			modelStack.PopMatrix();
 		}
+
+		//bomb
+		modelStack.PushMatrix();               
+		modelStack.Translate(-4.5f, 0.65f, 0.f);
+		modelStack.Scale(20.f, 8.5f, 10.f);
+
+		meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
+		meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_BOMB]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
+		meshList[GEO_BOMB]->material.kShininess = 16.f;
+		RenderMesh(meshList[GEO_BOMB], true);
+		modelStack.PopMatrix();
+		
 		modelStack.PopMatrix();
 	}
 
