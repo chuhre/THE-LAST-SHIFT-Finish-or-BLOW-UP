@@ -284,3 +284,67 @@ void ResolveCircle2StaticCircle(PhysicsObject& ball1, float radius1, PhysicsObje
 	ball1.vel -= (1.f + ball1.bounciness) * ball1.vel.Dot(collisionNormal) * collisionNormal;
 
 }
+
+bool OverlapSphere2Sphere(PhysicsObject& a, float ra, PhysicsObject& b, float rb, CollisionData3D& cd)
+{
+	Vector3 diff = a.pos - b.pos;
+	float dist = diff.Length();
+	float minDist = ra + rb;
+
+	if (dist >= minDist || dist < 0.0001f) return false;
+
+	cd.a = &a;
+	cd.b = &b;
+	cd.normal = diff * (1.f / dist);   
+	cd.penetration = minDist - dist;
+	return true;
+}
+
+bool OverlapSphere2AABB(PhysicsObject& sphere, float radius, PhysicsObject& box, glm::vec3 halfExtents, CollisionData3D& cd)
+{
+	// Find the closest point on the AABB to the sphere center
+	Vector3 closest;
+	closest.x = glm::clamp(sphere.pos.x, box.pos.x - halfExtents.x, box.pos.x + halfExtents.x);
+	closest.y = glm::clamp(sphere.pos.y, box.pos.y - halfExtents.y, box.pos.y + halfExtents.y);
+	closest.z = glm::clamp(sphere.pos.z, box.pos.z - halfExtents.z, box.pos.z + halfExtents.z);
+
+	// Distance from sphere center to closest point on AABB
+	Vector3 diff = sphere.pos - closest;
+	float dist = diff.Length();
+
+	if (dist >= radius || dist < 0.0001f) return false;
+
+	cd.a = &sphere;
+	cd.b = &box;
+	cd.normal = diff * (1.f / dist);  // normalized push direction
+	cd.penetration = radius - dist;
+	return true;
+}
+
+void ResolveCollision3D(CollisionData3D& cd)
+{
+	PhysicsObject* a = cd.a;
+	PhysicsObject* b = cd.b;
+
+	// Positional correction (push apart)
+	float invMassA = (a->mass > 0) ? 1.f / a->mass : 0.f;
+	float invMassB = (b->mass > 0) ? 1.f / b->mass : 0.f;
+	float totalInvMass = invMassA + invMassB;
+	if (totalInvMass == 0.f) return;
+
+	Vector3 correction = cd.normal * (cd.penetration / totalInvMass);
+	a->pos += correction * invMassA;
+	b->pos -= correction * invMassB;
+
+	// Impulse resolution
+	Vector3 relVel = a->vel - b->vel;
+	float velAlongNormal = relVel.Dot(cd.normal);
+	if (velAlongNormal > 0.f) return; // already separating
+
+	float restitution = std::min(a->bounciness, b->bounciness);
+	float impulseMag = -(1.f + restitution) * velAlongNormal / totalInvMass;
+
+	Vector3 impulse = cd.normal * impulseMag;
+	a->AddImpulse(impulse);
+	b->AddImpulse(impulse * -1.f);
+}

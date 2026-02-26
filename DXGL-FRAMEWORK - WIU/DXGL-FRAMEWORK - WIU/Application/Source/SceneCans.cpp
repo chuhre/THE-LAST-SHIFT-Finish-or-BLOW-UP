@@ -230,8 +230,9 @@ void SceneCans::Update(double dt)
 		}
 	}
 		
-	
 
+	int flyingBall = m_currentBall - 1;
+	bool ballInFlight = (flyingBall >= 0 && m_balls[flyingBall].inAir);
 
 	// === ANIMATION/INTERACTIONS ====
 	//Door interaction
@@ -283,18 +284,20 @@ void SceneCans::Update(double dt)
 	//game logic
 	if (gameState == GAME_PLAYING)
 	{
-		if (m_balls->inAir)
+		//ball vs can collision
+		if (m_balls[0].inAir)
 		{
 			UpdateBall(static_cast<float>(dt));
-			CheckBallCanCollisions();
-			CheckFloorCollisions();
+			CheckBallCanCollisions(0);
+			CheckFloorCollisions(0);
 		}
 
 		UpdateCans(static_cast<float>(dt));
 		CheckCanCanCollisions();
+		CheckCanSupports();
 
 		//check if all cans knocked
-		if (m_throwsLeft == 0)
+		if (m_throwsLeft == 0 && !m_balls[0].inAir)
 		{
 			int knocked = 0;
 			for (int i = 0; i < NUM_CANS; ++i)
@@ -305,7 +308,7 @@ void SceneCans::Update(double dt)
 				gameState = GAME_WON;
 				SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = true;
 			}
-			else if (!m_balls->inAir && m_throwsLeft <= 0)
+			else 
 			{
 				gameState = GAME_LOST;
 			}
@@ -333,10 +336,21 @@ void SceneCans::Update(double dt)
 
 			// Reset aim to point roughly at the cans
 			m_aimPitch = 75.f;
-			m_aimZOffset = 0.f;
 			m_aimDir = glm::normalize(glm::vec3(
 				cos(glm::radians(m_aimPitch)), sin(glm::radians(m_aimPitch)), 0.f
 			));
+
+			// Switch to spotlight aimed at the can table
+			light[0].type = Light::LIGHT_SPOT;
+			light[0].position = glm::vec3(0.f, 8.f, -1.f);   // above and behind player
+			light[0].spotDirection = glm::normalize(glm::vec3(0.f, -1.f, -1.f)); // aimed at cans
+			light[0].cosCutoff = 25.f;   // tight cone
+			light[0].cosInner = 15.f;
+			light[0].power = 3.f;    // brighter for dramatic effect
+			glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
+			glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
+			glUniform1f(m_parameters[U_LIGHT0_COSCUTOFF], cosf(glm::radians(light[0].cosCutoff)));
+			glUniform1f(m_parameters[U_LIGHT0_COSINNER], cosf(glm::radians(light[0].cosInner)));
 
 			m_isAiming = true;
 		}
@@ -345,12 +359,9 @@ void SceneCans::Update(double dt)
 	{
 		showBoothPrompt = false;
 	}
+	
 
-
-
-	std::cout << "pos" << camera.position.x << "   " << camera.position.y << "   " << camera.position.z << std::endl;
-	std::cout << "targ" << camera.target.x << "   " << camera.target.y << "   " << camera.target.z << std::endl;
-
+	
 }
 
 void SceneCans::Render()
@@ -536,12 +547,16 @@ void SceneCans::Render()
 		meshList[GEO_COUNTER]->material.kShininess = 8.f;
 		RenderMesh(meshList[GEO_COUNTER], true);
 
+		int render = 1;
+		if (m_isAiming) render = 0;
+
 		//only render ball if NOT in air
 		if (!m_balls[0].inAir)
 		{
 			modelStack.PushMatrix();
 			modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
 			modelStack.Scale(15.f, 6.f, 6.f);
+			modelStack.Rotate(0, render, 0, 0);
 			meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 			meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -554,6 +569,20 @@ void SceneCans::Render()
 			modelStack.PushMatrix();
 			modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
 			modelStack.Scale(15.f, 6.f, 6.f);
+			modelStack.Rotate(0, render, 0, 0);
+			meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_BALL], true);
+			modelStack.PopMatrix();
+		}
+
+		if (!m_balls[2].inAir)
+		{
+			modelStack.PushMatrix();
+			modelStack.Translate(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
+			modelStack.Scale(15.f, 6.f, 6.f);
+			modelStack.Rotate(0, render, 0, 0);
 			meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 			meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 			meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -565,7 +594,7 @@ void SceneCans::Render()
 
 	//render missing ball
 	modelStack.PushMatrix();
-	modelStack.Translate(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
+	modelStack.Translate(m_balls[3].ball.pos.x, m_balls[3].ball.pos.y, m_balls[3].ball.pos.z);
 	modelStack.Scale(17.f, 17.f, 17.f);
 	modelStack.Rotate(0, renderBall, 0, 0);
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
@@ -574,13 +603,12 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
 
-
-	// Render thrown ball in WORLD space
+	//flying ball
 	if (m_balls[0].inAir)
 	{
 		modelStack.PushMatrix();
 		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
-		modelStack.Scale(0.15f, 0.15f, 0.15f);  // world-scale size, tune as needed
+		modelStack.Scale(0.15f, 0.15f, 0.15f);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -719,34 +747,16 @@ void SceneCans::Render()
 		modelStack.PopMatrix();
 
 	}
-	
-	//draw outlines of collision area
-	for (const AABB& box : collisionBoxes)
-	{
-		modelStack.PushMatrix();
 
-		// Calculate center and size
-		glm::vec3 center = (box.min + box.max) * 0.5f;
-		glm::vec3 size = box.max - box.min;
-
-		modelStack.Translate(center.x, center.y, center.z);
-		modelStack.Scale(size.x, size.y, size.z);
-
-		// Render as wireframe
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		RenderMesh(meshList[GEO_CUBE], false);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-
-		modelStack.PopMatrix();
-	}
-
+	bool ballInFlight = m_balls[0].inAir;
 	// Only show aim line when game is active and ball not in air
-    if (gameState == GAME_PLAYING && !m_balls->inAir)
-        DrawAimLine();
+	if (gameState == GAME_PLAYING && !ballInFlight)
+		DrawAimLine();
 
-	if (!m_isAiming)
-		DrawRayCastLine();
+	/*if (!m_isAiming)
+		DrawRayCastLine();*/
 
+	//RenderColDebug(0);
 	RenderHUD();
 }
 
@@ -977,6 +987,14 @@ void SceneCans::HandleMouseInput()
 			camera.position = m_savedCamPos;
 			camera.target = m_savedCamTarget;
 			camera.up = m_savedCamUp;
+
+			// Restore point light
+			light[0].type = Light::LIGHT_POINT;
+			light[0].position = glm::vec3(0.f, 5.f, 0.f);
+			light[0].power = 1.f;
+			glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
+			glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
+
 			m_isAiming = false;
 		}
 	}
@@ -1078,10 +1096,118 @@ void SceneCans::RenderTextOnScreen(Mesh* mesh, std::string
 	glDisable(GL_BLEND);
 }
 
+void SceneCans::RenderColDebug(int ballIdx)
+{
+	glm::vec3 canHalfExtents(0.3f, 0.4f, 0.3f);  // match your CheckBallCanCollisions values
+	float ballRadius = 0.05f;                          // match your CheckBallCanCollisions value
+
+	// Draw each can's AABB as a wireframe box
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		if (!m_cans[i].active) continue;
+
+		glm::vec3 canPos(m_cans[i].colPos.x, m_cans[i].colPos.y, m_cans[i].colPos.z);
+
+		modelStack.PushMatrix();
+		modelStack.Translate(canPos.x, canPos.y, canPos.z);
+		modelStack.Scale(canHalfExtents.x * 2.f,   // full width  = halfExtent * 2
+			canHalfExtents.y * 2.f,   // full height
+			canHalfExtents.z * 2.f);  // full depth
+
+		// Green if upright, red if knocked
+		glm::vec3 boxColor = m_cans[i].knocked ? glm::vec3(1, 0, 0) : glm::vec3(0, 1, 0);
+		meshList[GEO_CUBE]->material.kAmbient = boxColor;
+		meshList[GEO_CUBE]->material.kDiffuse = boxColor;
+		meshList[GEO_CUBE]->material.kSpecular = glm::vec3(0.f);
+		meshList[GEO_CUBE]->material.kShininess = 1.f;
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		RenderMesh(meshList[GEO_CUBE], false);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		modelStack.PopMatrix();
+	}
+
+	// Draw ball collision sphere as a wireframe sphere
+	if (ballIdx >= 0)
+	{
+		glm::vec3 ballPos(m_balls[ballIdx].ball.pos.x,
+			m_balls[ballIdx].ball.pos.y,
+			m_balls[ballIdx].ball.pos.z);
+
+		modelStack.PushMatrix();
+		modelStack.Translate(ballPos.x, ballPos.y, ballPos.z);
+		modelStack.Scale(ballRadius * 2.f, ballRadius * 2.f, ballRadius * 2.f);
+
+		meshList[GEO_SPHERE]->material.kAmbient = glm::vec3(0.f, 0.f, 1.f);  // blue
+		meshList[GEO_SPHERE]->material.kDiffuse = glm::vec3(0.f, 0.f, 1.f);
+		meshList[GEO_SPHERE]->material.kSpecular = glm::vec3(0.f);
+		meshList[GEO_SPHERE]->material.kShininess = 1.f;
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		RenderMesh(meshList[GEO_SPHERE], false);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		modelStack.PopMatrix();
+	}
+}
+
+void SceneCans::CheckCanSupports()
+{
+	bool anyChanged = true;
+	int counter = 0;
+
+	// Keep looping until no new cans fall this frame
+	// (handles chain: bottom falls -> middle loses support -> top loses support)
+	while (anyChanged && counter < NUM_CANS)
+	{		
+			anyChanged = false;
+			counter++;
+
+			for (int i = 0; i < NUM_CANS; ++i)
+			{
+				if (m_cans[i].knocked)           continue;
+				if (m_cans[i].supportCount == 0) continue;
+
+				bool hasSupport = false;
+				for (int s = 0; s < m_cans[i].supportCount; ++s)
+				{
+					int supportIdx = m_cans[i].supportedBy[s];
+
+					// Safety check — never access invalid index
+					if (supportIdx < 0 || supportIdx >= NUM_CANS) continue;
+
+					if (!m_cans[supportIdx].knocked)
+					{
+						hasSupport = true;
+						break;
+					}
+				}
+
+				if (!hasSupport)
+				{
+					m_cans[i].knocked = true;
+					m_cans[i].can.vel.y = -1.5f;
+					anyChanged = true;
+
+					for (int s = 0; s < m_cans[i].supportCount; ++s)
+					{
+						int supportIdx = m_cans[i].supportedBy[s];
+						if (supportIdx < 0 || supportIdx >= NUM_CANS) continue;
+
+						if (m_cans[supportIdx].knocked)
+						{
+							m_cans[i].can.vel.x += m_cans[supportIdx].can.vel.x * 0.3f;
+							m_cans[i].can.vel.z += m_cans[supportIdx].can.vel.z * 0.3f;
+						}
+					}
+				}
+			}
+	}
+}
+
 bool SceneCans::RayHitsBall(int ballIndex, float maxDist)
 {
 	// Convert Vector3 ball pos to glm
-	glm::vec3 ballPos(m_balls[2].ball.pos.x, m_balls[2].ball.pos.y, m_balls[2].ball.pos.z);
+	glm::vec3 ballPos(m_balls[3].ball.pos.x, m_balls[3].ball.pos.y, m_balls[3].ball.pos.z);
 
 	// Ray from camera eye along look direction
 	glm::vec3 rayOrigin = camera.position;
@@ -1173,17 +1299,6 @@ void SceneCans::BuildCollisionBoxes()
 	counter.max = glm::vec3(10.f, 2.f, 2.5f);
 	collisionBoxes.push_back(counter);
 
-	////separator
-	//AABB barrier;
-	//barrier.min = glm::vec3(6.f, -0.75f, -7.5f);
-	//barrier.max = glm::vec3(7.f, 8.f, 2.5f);
-	//collisionBoxes.push_back(barrier);
-
-	//AABB barrierL;
-	//barrierL.min = glm::vec3(-7.f, -0.75f, -7.5f);
-	//barrierL.max = glm::vec3(-6.f, 8.f, 2.5f);
-	//collisionBoxes.push_back(barrierL);
-
 }
 
 void SceneCans::InitialiseCans()
@@ -1205,14 +1320,6 @@ void SceneCans::InitialiseCans()
 	// Top row — 1 can
 	m_cans[5].can.pos = Vector3(0.f, counterTopY + canH * 2.f, 1.5f);
 
-	for (int i = 0; i < NUM_CANS; ++i)
-	{
-		m_cans[i].active = true;
-		m_cans[i].knocked = false;
-		m_cans[i].startPos = m_cans[i].can.pos;  
-		m_cans[i].can.vel = Vector3(0.f);
-	}
-
 	//decorative cans
 	m_staticCanPos[0] = glm::vec3(-canSpacing, counterTopY, 1.5f);
 	m_staticCanPos[1] = glm::vec3(0.f, counterTopY, 1.5f);
@@ -1220,21 +1327,59 @@ void SceneCans::InitialiseCans()
 	m_staticCanPos[3] = glm::vec3(-canSpacing * 0.5f, counterTopY + canH, 1.5f);
 	m_staticCanPos[4] = glm::vec3(canSpacing * 0.5f, counterTopY + canH, 1.5f);
 	m_staticCanPos[5] = glm::vec3(0.f, counterTopY + canH * 2.f, 1.5f);
+
+	//world space col pos
+	m_cans[0].colPos = glm::vec3(-0.75f, 2.5f, -3.9f);
+	m_cans[1].colPos = glm::vec3(0.0f, 2.5f, -3.9f);
+	m_cans[2].colPos = glm::vec3(0.75f, 2.5f, -3.9f);
+	m_cans[3].colPos = glm::vec3(-0.37f, 3.2f, -3.9f);
+	m_cans[4].colPos = glm::vec3(0.37f, 3.2f, -3.9f);
+	m_cans[5].colPos = glm::vec3(0.0f, 3.9f, -3.9f);
+
+
+	for (int i = 0; i < NUM_CANS; ++i)
+	{
+		m_cans[i].active = true;
+		m_cans[i].knocked = false;
+		m_cans[i].startPos = m_cans[i].can.pos;
+		m_cans[i].can.vel = Vector3(0.f);
+		m_cans[i].can.mass = 1.f;
+		m_cans[i].can.bounciness = 0.1f;
+		m_cans[i].supportedBy[0] = -1;
+		m_cans[i].supportedBy[1] = -1;
+		m_cans[i].supportCount = 0;
+	}
+
+	// Middle row
+	m_cans[3].supportedBy[0] = 0;  m_cans[3].supportedBy[1] = 1;  m_cans[3].supportCount = 2;
+	m_cans[4].supportedBy[0] = 1;  m_cans[4].supportedBy[1] = 2;  m_cans[4].supportCount = 2;
+
+	// Top
+	m_cans[5].supportedBy[0] = 3;  m_cans[5].supportedBy[1] = 4;  m_cans[5].supportCount = 2;
 }
 
 void SceneCans::InitialiseBalls()
 {
-	m_noOfBalls = 2;
-	m_throwsLeft = 2;
+	m_noOfBalls = 3;
+	m_throwsLeft = 3;
 	ballCollected = false;
-
 	m_isAiming = false;
+	m_currentBall = 0;
 
 	//initialise balls pos
 	m_balls[0].ball.pos = Vector3(-0.25f, 0.61f, 0.f);
 	m_balls[1].ball.pos = Vector3(0.4f, 0.61f, 0.f);
-	m_balls[2].ball.pos = Vector3(-15.75f, 0.75f, 10.f);
+	m_balls[2].ball.pos = Vector3(0.55f, 0.61f, 0.f);
 
+	// Missing ball on floor to find
+	m_balls[3].ball.pos = Vector3(-15.75f, 0.75f, 10.f);
+
+	for (int i = 0; i < 4; ++i)
+	{
+		m_balls[i].inAir = false;
+		m_balls[i].ball.vel = Vector3(0, 0, 0);
+		m_balls[i].ball.accel = Vector3(0, 0, 0);
+	}
 }
 
 void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
@@ -1245,134 +1390,157 @@ void SceneCans::ApplyGravity(PhysicsObject& obj, float dt)
 
 void SceneCans::UpdateBall(float dt)
 {
-	if (!m_balls->inAir) return;
-	ApplyGravity(m_balls->ball, dt);
+	if (!m_balls[0].inAir) return;
+
+	//add gravity as force each frame
+	m_balls[0].ball.AddForce(Vector3(0.f, GRAVITY * m_balls[0].ball.mass, 0.f));
+	m_balls[0].ball.UpdatePhysics(dt);
+
 }
 
 void SceneCans::UpdateCans(float dt)
 {
-	const float FRICTION = 0.85f;
+	const float FRICTION = 2.5f;
+	const float FLOOR_Y = 1.1f;  
 
 	for (int i = 0; i < NUM_CANS; ++i)
 	{
 		if (!m_cans[i].knocked) continue;
 
-		m_cans[i].can.pos += m_cans[i].can.vel * dt;
-		m_cans[i].can.vel = m_cans[i].can.vel * FRICTION;
+		// Apply gravity
+		ApplyGravity(m_cans[i].can, dt); 
 
-		if (m_cans[i].can.vel.Length() < 0.01f)
-			m_cans[i].can.vel.SetZero();
+		// Update position
+		m_cans[i].can.pos += m_cans[i].can.vel * dt;
+
+		// Sync world-space colPos to follow the can
+		m_cans[i].colPos.x = m_cans[i].can.pos.x; // sync X/Z drift
+		m_cans[i].colPos.z = m_cans[i].can.pos.z;
+		// Y offset: colPos was ~1.0 above can.pos originally, maintain that
+		m_cans[i].colPos.y = m_cans[i].can.pos.y + 1.0f;
+
+		// Floor collision — stop them sinking through the table/floor
+		if (m_cans[i].can.pos.y <= FLOOR_Y)
+		{
+			m_cans[i].can.pos.y = FLOOR_Y;
+			m_cans[i].can.vel.y = 0.f;         // kill vertical velocity on landing
+
+			// Apply horizontal friction only once grounded
+			m_cans[i].can.vel.x *= (1.f - FRICTION * dt);
+			m_cans[i].can.vel.z *= (1.f - FRICTION * dt);
+
+			if (m_cans[i].can.vel.Length() < 0.01f)
+				m_cans[i].can.vel.SetZero();
+		}
 	}
 }
 
-void SceneCans::CheckBallCanCollisions()
+void SceneCans::CheckBallCanCollisions(int ballIdx)
 {
-	const float BALL_RADIUS = 0.15f;
-	const float CAN_RADIUS = 0.18f;  // tune to match your can model
-
-	Vector3 ballPos = m_balls->ball.pos;
+	glm::vec3 canHalfExtents(0.3f, 0.4f, 0.3f);  
 
 	for (int i = 0; i < NUM_CANS; ++i)
 	{
 		if (!m_cans[i].active || m_cans[i].knocked) continue;
 
-		Vector3 canPos = m_cans[i].can.pos;
-		Vector3 diff = ballPos - canPos;
-		float dist = diff.Length();
-		float minDist = BALL_RADIUS + CAN_RADIUS;
+		// Use world-space collisionPos instead of can.pos
+		PhysicsObject canCollider;
+		canCollider.pos = Vector3(m_cans[i].colPos.x, m_cans[i].colPos.y, m_cans[i].colPos.z);
+		canCollider.vel = m_cans[i].can.vel;
+		canCollider.mass = m_cans[i].can.mass;
 
-		if (dist < minDist && dist > 0.f)
+		CollisionData3D cd;
+		if (OverlapSphere2AABB(m_balls[ballIdx].ball, 0.1f,canCollider, canHalfExtents,cd))
 		{
-			// Knock the can over
+			ResolveCollision3D(cd);
+			m_cans[i].can.vel = canCollider.vel;
 			m_cans[i].knocked = true;
 
-			// Give it a velocity in the direction of impact
-			Vector3 knockDir = diff;
-			knockDir.Normalize();
-			float impactSpeed = m_balls->ball.vel.Length() * 0.6f;
-			m_cans[i].can.vel = knockDir * impactSpeed;
-
-			// Deflect the ball slightly
-			m_balls->ball.vel.x *= 0.6f;
-			m_balls->ball.vel.z *= 0.6f;
+			m_balls[ballIdx].ball.vel.x *= 0.3f;
+			m_balls[ballIdx].ball.vel.z *= 0.3f;
 		}
 	}
 }
 
 void SceneCans::CheckCanCanCollisions()
 {
-	const float CAN_RADIUS = 0.18f;
+	glm::vec3 canHalfExtents(0.1f, 0.2f, 0.1f);
 
 	for (int i = 0; i < NUM_CANS; ++i)
 	{
-		if (!m_cans[i].knocked) continue;  // only moving cans hit others
+		if (!m_cans[i].knocked) continue;
 
-		for (int j = 0; j < NUM_CANS; ++j)
+		for (int j = i + 1; j < NUM_CANS; ++j)
 		{
-			if (i == j || m_cans[j].knocked) continue;
+			if (m_cans[j].knocked) continue;
 
-			Vector3 diff = m_cans[j].can.pos - m_cans[i].can.pos;
-			float dist = diff.Length();
+			// Use collisionPos for accurate chain detection too
+			PhysicsObject a, b;
+			a.pos = Vector3(m_cans[i].colPos.x,
+				m_cans[i].colPos.y,
+				m_cans[i].colPos.z);
+			b.pos = Vector3(m_cans[j].colPos.x,
+				m_cans[j].colPos.y,
+				m_cans[j].colPos.z);
+			a.mass = b.mass = 1.f;
 
-			if (dist < CAN_RADIUS * 2.f && dist > 0.f)
+			CollisionData3D cd;
+			if (OverlapSphere2AABB(a, 0.1f, b, canHalfExtents, cd))
 			{
 				m_cans[j].knocked = true;
 
-				Vector3 pushDir = diff;
-				pushDir.Normalize();
-				float speed = m_cans[i].can.vel.Length() * 0.5f;
-				m_cans[j].can.vel = pushDir * speed;
+				// Very weak chain — adjacent cans just tip, not launch
+				Vector3 pushDir = b.pos - a.pos;
+				pushDir.y = 0.f;
+				if (pushDir.Length() > 0.001f)
+				{
+					pushDir.Normalize();
+					float chainSpeed = m_cans[i].can.vel.Length() * 0.2f; // 80% energy loss
+					m_cans[j].can.vel = pushDir * chainSpeed;
+					m_cans[j].can.vel.y = 0.3f;
+				}
 			}
 		}
 	}
 }
 
 
-void SceneCans::CheckFloorCollisions()
+void SceneCans::CheckFloorCollisions(int ballIdx)
 {
-	const float FLOOR_Y = 0.3f;   // match your floor AABB top
+	const float FLOOR_Y = 0.3f;
 	const float BALL_RADIUS = 0.15f;
 
-	if (m_balls->ball.pos.y - BALL_RADIUS <= FLOOR_Y)
+	if (m_balls[ballIdx].ball.pos.y - BALL_RADIUS <= FLOOR_Y)
 	{
-		m_balls->ball.pos.y = FLOOR_Y + BALL_RADIUS;
+		m_balls[ballIdx].ball.pos.y = FLOOR_Y + BALL_RADIUS;
+		m_balls[ballIdx].ball.vel.y *= -0.2f;
+		m_balls[ballIdx].ball.vel.x *= 0.7f;
+		m_balls[ballIdx].ball.vel.z *= 0.7f;
 
-		// small bounce, then kill velocity
-		m_balls->ball.vel.y *= -0.2f;
-		m_balls->ball.vel.x *= 0.7f;
-		m_balls->ball.vel.z *= 0.7f;
-
-		if (std::abs(m_balls->ball.vel.y) < 0.5f)
+		if (std::abs(m_balls[ballIdx].ball.vel.y) < 0.5f)
 		{
-			m_balls->ball.vel.SetZero();
-			m_balls->inAir = false;
+			m_balls[ballIdx].ball.vel.SetZero();
+			m_balls[ballIdx].inAir = false;
 		}
 	}
 }
 
-bool SceneCans::CheckSceneCollisions()
-{
-	return false;
-}
 
 void SceneCans::LaunchBall()
 {
+	if (m_currentBall >= m_noOfBalls) return; // no balls left
+
 	m_throwsLeft--;
-	m_noOfBalls--;
-
-	if (m_noOfBalls < 0) m_noOfBalls == 0;
-
+	
 	// Direction from launch point toward where the line ends
 	glm::vec3 dir = glm::normalize(m_aimWorldTarget - glm::vec3(LAUNCH_POS));
-	float launchSpeed = 35.f;
+	float launchSpeed = 15.f;
 
 	m_balls[0].ball.pos = Vector3(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z);
-	m_balls[0].ball.vel = Vector3(
-		dir.x * launchSpeed,
-		dir.y * launchSpeed,
-		dir.z * launchSpeed
-	);
+	m_balls[0].ball.vel = Vector3(dir.x * launchSpeed, dir.y * launchSpeed,dir.z * launchSpeed);
 	m_balls[0].inAir = true;
+
+	m_currentBall++;
 }
 
 void SceneCans::ResetGame()
@@ -1384,6 +1552,8 @@ void SceneCans::ResetGame()
 		glm::vec3(0, 1.0f, 0)		// up
 	);
 	gameState = GAME_NOT_STARTED;
+
+	m_currentBall = 0;
 	InitialiseCans();
 	InitialiseBalls();
 }
@@ -1412,7 +1582,7 @@ void SceneCans::DrawAimLine()
 	glm::vec3 rayDir = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
 
 	// --- Step 3: Intersect ray with vertical plane at Z
-	const float CAN_Z = 1.5f;
+	const float CAN_Z = -5.5f;
 	if (std::abs(rayDir.z) < 0.0001f) return;  // ray is parallel to plane, skip
 	float t = (CAN_Z - AIM_CAM_POS.z) / rayDir.z;
 	if (t <= 0.f) return;
@@ -1425,8 +1595,9 @@ void SceneCans::DrawAimLine()
 	m_aimWorldTarget = aimTarget;
 
 	// --- Step 4: Simulate parabolic arc with gravity toward aimTarget ---
-	float launchSpeed = 20.f;
+	float launchSpeed = 15.f;
 	glm::vec3 dir = glm::normalize(aimTarget - glm::vec3(LAUNCH_POS));
+	dir.y += 0.45f;
 	m_aimWorldTarget = aimTarget;
 
 	glm::vec3 pos(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z);
@@ -1466,6 +1637,7 @@ void SceneCans::DrawAimLine()
 	}
 }
 
+//draw raycast line for debugging
 void SceneCans::DrawRayCastLine()
 {
 	glm::vec3 rayDir = glm::normalize(camera.target - camera.position);
