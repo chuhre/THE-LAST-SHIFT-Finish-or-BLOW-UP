@@ -32,7 +32,7 @@ SceneMenu::~SceneMenu()
 void SceneMenu::Init()
 {
     // Black background – suits a title screen
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0.10f, 0.02f, 0.18f, 1.0f);  // dark purple background
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -172,58 +172,116 @@ void SceneMenu::Render()
     // All UI is drawn in 2-D ortho space (800 x 600), same as SceneShooting
     // ─────────────────────────────────────────────────────────────────────
 
-    // ── Title ─────────────────────────────────────────────────────────────
-    //   Large, centred near the top of the screen
+    // ── Enable blending so quads layer correctly ─────────────────────────
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Shared specular / shininess for all flat quads
+    meshList[GEO_QUAD]->material.kSpecular = glm::vec3(0.f, 0.f, 0.f);
+    meshList[GEO_QUAD]->material.kShininess = 1.f;
+
+
+
+    // ── WHITE TITLE BACKGROUND RECTANGLE ─────────────────────────────────
+    //    Sits behind the title and subtitle  (Y: 455–560)
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(1.f, 1.f, 1.f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(1.f, 1.f, 1.f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 510.f, 680.f, 100.f);
+
+    // ── CENTRE PANEL — deep warm red behind controls ──────────────────────
+    //    Covers Y: 150–445
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.45f, 0.05f, 0.05f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.45f, 0.05f, 0.05f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 297.f, 680.f, 295.f);
+
+    // ── BOTTOM BAR — bright carnival yellow ──────────────────────────────
+    //    Covers Y: 50–148
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.90f, 0.65f, 0.00f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.90f, 0.65f, 0.00f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 99.f, 680.f, 100.f);
+
+    // ── TOP DIVIDER — yellow stripe under the white box ───────────────────
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.95f, 0.75f, 0.00f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.95f, 0.75f, 0.00f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 456.f, 680.f, 6.f);
+
+    // ── BOTTOM DIVIDER — red stripe above the yellow bar ──────────────────
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.72f, 0.08f, 0.08f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.72f, 0.08f, 0.08f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 149.f, 680.f, 6.f);
+
+    glDisable(GL_BLEND);
+
+    // ── Title — red text on white rectangle ───────────────────────────────
     RenderTextOnScreen(meshList[GEO_TEXT],
         "THE LAST SHIFT:",
-        glm::vec3(1.f, 0.85f, 0.f),   // golden yellow
-        40.f,
-        90.f, 420.f);
+        glm::vec3(0.72f, 0.05f, 0.05f),
+        38.f,
+        130.f, 510.f);
 
-    // ── Sub-title ─────────────────────────────────────────────────────────
+    // ── Sub-title — dark red below title, still on white box ─────────────
     RenderTextOnScreen(meshList[GEO_TEXT],
-        "Finish or BlOW UP!",
-        glm::vec3(1.f, 1.f, 1.f),
-        25.f,
-        190.f, 370.f);
+        "Finish or BLOW UP!",
+        glm::vec3(0.50f, 0.04f, 0.04f),
+        22.f,
+        200.f, 468.f);
 
-    // ── Controls reminder ─────────────────────────────────────────────────
+    // ── Controls header — yellow on red panel ─────────────────────────────
+    RenderTextOnScreen(meshList[GEO_TEXT],
+        "CONTROLS",
+        glm::vec3(0.f, 0.f, 0.f),
+        22.f,
+        318.f, 415.f);
+
+    // ── Controls list — light yellow on red panel ─────────────────────────
     RenderTextOnScreen(meshList[GEO_TEXT],
         "WASD  - Move",
-        glm::vec3(0.8f, 0.8f, 0.8f),
+        glm::vec3(0.f, 0.f, 0.f),
+        22.f,
+        270.f, 380.f);
+
+    RenderTextOnScreen(meshList[GEO_TEXT],
+        "MOUSE - Look",
+        glm::vec3(0.f, 0.f, 0.f),
+        22.f,
+        270.f, 350.f);
+
+    RenderTextOnScreen(meshList[GEO_TEXT],
+        "F     - Interact",
+        glm::vec3(0.f, 0.f, 0.f),
+        22.f,
+        270.f, 320.f);
+
+    RenderTextOnScreen(meshList[GEO_TEXT],
+        "LMB   - Shoot",
+        glm::vec3(0.f, 0.f, 0.f),
+        22.f,
+        270.f, 290.f);
+
+    RenderTextOnScreen(meshList[GEO_TEXT],
+        "P     - Pause",
+        glm::vec3(0.f, 0.f, 0.f),
         22.f,
         270.f, 260.f);
 
     RenderTextOnScreen(meshList[GEO_TEXT],
-        "MOUSE - Look",
-        glm::vec3(0.8f, 0.8f, 0.8f),
+        "ESC   - Quit",
+        glm::vec3(0.f, 0.f, 0.f),
         22.f,
         270.f, 230.f);
 
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "F     - Interact",
-        glm::vec3(0.8f, 0.8f, 0.8f),
-        22.f,
-        270.f, 200.f);
-
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "LMB   - Shoot",
-        glm::vec3(0.8f, 0.8f, 0.8f),
-        22.f,
-        270.f, 170.f);
-
-    // ── "Press ENTER" prompt (blinking) ───────────────────────────────────
+    // ── "Press ENTER" prompt — red text on yellow bar ─────────────────────
     if (showBlink)
     {
         RenderTextOnScreen(meshList[GEO_TEXT],
-            "PRESS SPACE TO START",
-            glm::vec3(1.f, 1.f, 0.f),   // bright yellow
-            28.f,
-            165.f, 110.f);
+            "PRESS [SPACE] TO START",
+            glm::vec3(0.55f, 0.03f, 0.03f),
+            26.f,
+            120.f, 82.f);
     }
 }
 
-
+// ─────────────────────────────────────────────────────────────────────────────
 void SceneMenu::Exit()
 {
     for (int i = 0; i < NUM_GEOMETRY; ++i)
@@ -238,7 +296,9 @@ void SceneMenu::Exit()
     glDeleteProgram(m_programID);
 }
 
-
+// ─────────────────────────────────────────────────────────────────────────────
+// RenderMesh – identical to SceneShooting's implementation
+// ─────────────────────────────────────────────────────────────────────────────
 void SceneMenu::RenderMesh(Mesh* mesh, bool enableLight)
 {
     glm::mat4 MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top();
@@ -282,7 +342,38 @@ void SceneMenu::RenderMesh(Mesh* mesh, bool enableLight)
         glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RenderMeshOnScreen — identical to SceneShooting's implementation
+// Ortho space: 800 x 600. x/y = centre of quad, sizex/sizey = dimensions.
+// ─────────────────────────────────────────────────────────────────────────────
+void SceneMenu::RenderMeshOnScreen(Mesh* mesh, float x, float y,
+    float sizex, float sizey)
+{
+    glDisable(GL_DEPTH_TEST);
+    glm::mat4 ortho = glm::ortho(0.f, 800.f, 0.f, 600.f, -100.f, 100.f);
 
+    projectionStack.PushMatrix();
+    projectionStack.LoadMatrix(ortho);
+    viewStack.PushMatrix();
+    viewStack.LoadIdentity();
+    modelStack.PushMatrix();
+    modelStack.LoadIdentity();
+
+    modelStack.Translate(x, y, 0.f);
+    modelStack.Scale(sizex, sizey, 1.f);
+
+    RenderMesh(mesh, false);   // UI — no lighting
+
+    projectionStack.PopMatrix();
+    viewStack.PopMatrix();
+    modelStack.PopMatrix();
+
+    glEnable(GL_DEPTH_TEST);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RenderTextOnScreen – identical to SceneShooting's implementation
+// ─────────────────────────────────────────────────────────────────────────────
 void SceneMenu::RenderTextOnScreen(Mesh* mesh, std::string text,
     glm::vec3 color, float size,
     float x, float y)
