@@ -17,8 +17,8 @@ class SceneManager
 public:
     enum SCENE_TYPE
     {
-        SCENE_MENU,
-        SCENE_LOBBY = 0,
+        SCENE_MENU = 0,
+        SCENE_LOBBY,
         SCENE_DUCKS,
         SCENE_SHOOTING,
         SCENE_CANS,

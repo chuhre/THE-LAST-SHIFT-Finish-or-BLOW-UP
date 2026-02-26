@@ -10,6 +10,7 @@
 #include <iostream>
 #include "Door.h"
 #include "PhysicsObject.h"
+#include "CollisionDetection.h"
 
 struct AABB {
 	glm::vec3 min;
@@ -103,6 +104,9 @@ public:
 		bool active = true;
 		bool knocked = false;
 		Vector3 startPos;
+		glm::vec3 colPos;
+		int supportedBy[2] = { -1, -1 };  // max 2 supports, -1 means empty
+		int supportCount = 0;            // how many valid supports
 	};
 
 	struct Ball
@@ -114,8 +118,6 @@ public:
 		bool inAir = false;
 	};
 
-	static const int NUM_CANS = 6;
-	static const int MAX_BALLS = 3;
 
 
 	SceneCans();
@@ -136,6 +138,8 @@ private:
 	void RenderText(Mesh* mesh, std::string text, glm::vec3	color);
 	void RenderTextOnScreen(Mesh* mesh, std::string text, glm::vec3 color, float size, float x, float y);
 
+	void RenderColDebug(int ballIdx);
+
 
 	//gl handlers
 	unsigned m_vertexArrayID;
@@ -150,7 +154,7 @@ private:
 	glm::vec3 m_savedCamUp;
 
 	const glm::vec3 AIM_CAM_POS = glm::vec3(0.f, 4.1f, 2.9f);
-	const glm::vec3 AIM_CAM_TARGET = glm::vec3(0.f, 3.9f, 1.9f);
+	const glm::vec3 AIM_CAM_TARGET = glm::vec3(0.f, 2.5f, -4.f);
 	const glm::vec3 LAUNCH_POS = glm::vec3(0.1f, 3.2f, 2.5f);
 
 	MatrixStack modelStack, viewStack, projectionStack;
@@ -169,16 +173,20 @@ private:
 	GameState gameState;
 
 	//cans
+	static const int NUM_CANS = 6;
 	Can m_cans[NUM_CANS];
 	glm::vec3 m_staticCanPos[NUM_CANS];
+	void CheckCanSupports();
 
 
 	//balls
-	Ball m_balls[3];
+	static const int MAX_BALLS = 4;
+	Ball m_balls[MAX_BALLS];
 	int m_noOfBalls;
 	int  m_throwsLeft;
 	bool ballCollected;
 	bool showPickupPrompt = false;
+	int m_currentBall = 0;
 	bool RayHitsBall(int ballIndex, float maxDist);
 
 	//booth
@@ -199,24 +207,21 @@ private:
 	void ApplyGravity(PhysicsObject& obj, float dt);
 	void UpdateBall(float dt);
 	void UpdateCans(float dt);
-	void CheckBallCanCollisions();
+	void CheckBallCanCollisions(int ballIdx);
 	void CheckCanCanCollisions();
-	void CheckFloorCollisions();
-	bool CheckSceneCollisions();
+	void CheckFloorCollisions(int ballIdx);
+
+
+
 	void LaunchBall();
 	void ResetGame();
 
 	//aim line
 	float m_aimYaw = 0.f;   // horizontal aim angle (degrees)
 	float m_aimPitch = 75.f;    // vertical aim angle (degrees)
-	float m_aimZOffset = 0.f;   // which can to target along Z axis
 	glm::vec3 m_aimDir;         // computed aim direction
-	glm::vec3 m_dynamicAimTarget; // where the aim camera looks
-
 	glm::vec3 m_aimWorldTarget;
 	void DrawAimLine();
-
-
 
 	//helpers
 	void DrawRayCastLine();
