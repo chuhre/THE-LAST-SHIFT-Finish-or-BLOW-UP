@@ -132,11 +132,13 @@ meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism(
 
 meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism(
     "Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),  // light tan canvas
-    20.f, 0.2f, 15.f);
+20.f, 0.2f, 15.f);
+meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
 
 meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism(
     "Wall", glm::vec3(0.9f, 0.85f, 0.6f),        // carnival cream
     1.f, 1.f, 1.f);   // scaled per-wall in Render()
+meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");
 
 // Counter (barrier between player and targets)
 meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism(
@@ -739,7 +741,7 @@ void SceneShooting::Render()
 	modelStack.PushMatrix();
 	modelStack.Translate(0.f, 5.9f, 7.5f);
 	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
-	modelStack.Scale(0.3f, 4.25f, 4.f);
+	modelStack.Scale(0.19f, 4.25f, 4.f);
 
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
@@ -1031,7 +1033,7 @@ void SceneShooting::Render()
 
 
 	// ---- DEBUG: Draw collision box outlines ----
-	for (const AABB& box : collisionBoxes)
+	/*for (const AABB& box : collisionBoxes)
 	{
 		modelStack.PushMatrix();
 
@@ -1046,7 +1048,7 @@ void SceneShooting::Render()
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 		modelStack.PopMatrix();
-	}
+	}*/
 
 }
 
@@ -1396,15 +1398,6 @@ void SceneShooting::BuildCollisionBoxes()
 	counter.max = glm::vec3(10.f, 2.f, 2.5f);
 	collisionBoxes.push_back(counter);
 
-	// Door (dynamic — updated every frame in Update())
-	// Door: position (1, 2, 7.5), width=2, height=3.75, depth=0.2
-	// Closed: X 1..3, Y 0.125..3.875, Z 7.4..7.6
-	/*doorCollisionIndex = (int)collisionBoxes.size();
-	AABB doorBox;
-	doorBox.min = glm::vec3(1.0f, 0.125f, 7.4f);
-	doorBox.max = glm::vec3(3.0f, 3.875f, 7.6f);
-	collisionBoxes.push_back(doorBox);*/
-
 	// Door (closed position - conservative box)
 	AABB doorBox;
 	doorBox.min = glm::vec3(-1.f, 0.f, 7.3f);
@@ -1412,10 +1405,10 @@ void SceneShooting::BuildCollisionBoxes()
 	collisionBoxes.push_back(doorBox);
 
 	// Gun on floor
-	AABB gunBox;
+	/*AABB gunBox;
 	gunBox.min = gunWorldPos - glm::vec3(0.4f, 0.3f, 0.25f);
 	gunBox.max = gunWorldPos + glm::vec3(0.4f, 0.3f, 0.25f);
-	collisionBoxes.push_back(gunBox);
+	collisionBoxes.push_back(gunBox);*/
 }
 
 
