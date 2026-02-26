@@ -11,6 +11,7 @@
 #include "PhysicsObject.h"
 #include "CollisionDetection.h"
 #include "Door.h"
+#include "SceneManager.h"
 
 
 class SceneTank : public Scene
@@ -38,9 +39,11 @@ public:
 		GEO_BALL3,
 		GEO_PLANK,
 		GEO_COUNTER,
+		GEO_BOMB,
 		GEO_PILLAR,
 		GEO_CABINET,
 		GEO_DOOR,
+		GEO_DUMMY,
 
 		GEO_LEFT,
 		GEO_RIGHT,
@@ -91,20 +94,13 @@ public:
 
 	enum GameState
 	{
-		GAME_NOT_STARTED = 0,
-		GAME_PLAYING,
-		GAME_WON,
-		GAME_LOST
+		STATE_FIND_BALLS, 
+		STATE_PLAYING, 
+		STATE_WON,
+		STATE_LOST,
 	};
 
-	enum CustomerState
-	{
-		CUSTOMER_NONE = 0,
-		CUSTOMER_WAITING,
-		CUSTOMER_ORDERED,
-		CUSTOMER_IS_MONSTER
-	};
-
+	GameState gameState;
 
 	SceneTank();
 	~SceneTank();
@@ -135,10 +131,14 @@ private:
 	Light light[NUM_LIGHTS];
 	bool enableLight;
 
-	// collision objects
-	PhysicsObject wallBack, wallLeft, wallRight, wallCeiling;
-	PhysicsObject objCounter, objPillar, objTank, objCabinet;
-	PhysicsObject objBox1, objBox2, objBox3, objBox4;
+	//// collision objects
+	//PhysicsObject wallBack, wallLeft, wallRight, wallCeiling;
+	//PhysicsObject objCounter, objPillar, objTank, objCabinet;
+	//PhysicsObject objBox1, objBox2, objBox3, objBox4;
+
+	// game timer
+	float gameTimer = 30.f;
+	bool timerActive = false;
 
 	struct AABB {
 		glm::vec3 min, max;
@@ -147,6 +147,7 @@ private:
 	std::vector<AABB> collisionBoxes;
 	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
 	void BuildCollisionBoxes();
+	int doorBoxIndex = -1;
 
 	// ball phys
 	PhysicsObject ballPhys;
@@ -182,8 +183,14 @@ private:
 	bool doorOpen = false;
 	float doorAngle = 0.f;
 
+	// dummy animation
+	float dummyFallAngle = 0.f;      // rotation as he tips over
+	float dummyFallY = 0.f;          // how far he's dropped
+	bool dummyFalling = false;
+	bool dummyInTank = false;
+
 	// For camera-relative throwing
-	glm::vec3 ballRestPos = glm::vec3(1.f, 1.1f, 5.f);
+	glm::vec3 ballRestPos = glm::vec3(0.f, 2.15f, 5.f);
 
 	// target as static AABB (world position)
 	glm::vec3 targetPos = glm::vec3(3.5f, 3.f, 0.f);
