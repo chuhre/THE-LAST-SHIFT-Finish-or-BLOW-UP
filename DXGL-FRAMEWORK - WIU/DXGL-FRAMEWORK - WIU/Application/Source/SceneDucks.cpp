@@ -1217,6 +1217,7 @@ void SceneDucks::HandleMouseInput()
 
 							if (ducksPickedUp >= MAX_DUCKS)
 								gameState = STATE_WON;
+								SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_DUCKS] = true;
 						}
 						else
 						{

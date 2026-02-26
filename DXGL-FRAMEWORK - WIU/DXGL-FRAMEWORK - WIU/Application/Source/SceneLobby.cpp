@@ -79,13 +79,34 @@ void SceneLobby::Init()
 	m_parameters[U_TEXT_ENABLED] = glGetUniformLocation(m_programID, "textEnabled");
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
-	// Initialise camera properties
-	//camera.Init(45.f, 45.f, 10.f);
-	camera.Init(
-		glm::vec3(0, 0.6, 10),		// position
-		glm::vec3(0, 2, 0),		// target
-		glm::vec3(0, 1.0f, 0)		// up
-	);
+	switch (SceneManager::GetInstance()->GetPreviousScene())
+	{
+	case SceneManager::SCENE_DUCKS:
+		camera.Init(glm::vec3(-8.f, 0.6f, 2.f),
+			glm::vec3(-8.f, 2.f, 0.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_SHOOTING:
+		camera.Init(glm::vec3(8.f, 0.6f, 2.f),
+			glm::vec3(8.f, 2.f, 0.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_CANS:
+		camera.Init(glm::vec3(0.f, 0.6f, 6.f),
+			glm::vec3(0.f, 2.f, 8.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_TANK:
+		camera.Init(glm::vec3(0.f, 0.6f, -6.f),
+			glm::vec3(0.f, 2.f, -8.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	default:
+		camera.Init(glm::vec3(0, 0.6f, 10),
+			glm::vec3(0, 2.f, 0),
+			glm::vec3(0, 1.f, 0));
+		break;
+	}
 
 	// Init VBO here
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
@@ -408,6 +429,17 @@ void SceneLobby::Render()
 		if (showInteractPrompt)
 			RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
 	}
+	
+
+	// All games completed
+	bool allDone = SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_DUCKS] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_TANK];
+
+	if (allDone)
+		RenderTextOnScreen(meshList[GEO_TEXT], "CONGRATULATIONS!", glm::vec3(1.f, 1.f, 0.f), 40.f, 230.f, 400.f);
+		RenderTextOnScreen(meshList[GEO_TEXT], "THANKS FOR PLAYING!", glm::vec3(1.f, 1.f, 0.f), 40.f, 200.f, 300.f);
 
 }
 

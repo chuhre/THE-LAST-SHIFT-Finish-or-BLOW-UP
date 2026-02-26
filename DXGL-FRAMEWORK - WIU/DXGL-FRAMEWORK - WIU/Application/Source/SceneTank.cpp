@@ -587,6 +587,7 @@ void SceneTank::Update(double dt)
 		if (targetRotation >= 90.f)
 		{
 			gameState = STATE_WON;
+			SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_TANK] = true;
 		}
 	}
 
