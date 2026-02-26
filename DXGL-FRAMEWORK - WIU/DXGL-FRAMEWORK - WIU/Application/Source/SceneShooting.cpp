@@ -373,7 +373,46 @@ void SceneShooting::Update(double dt)
 		showInteractPrompt = true;
 	}
 
-	
+	// --- Update door collision box dynamically ---
+	// Door hinge is at X=1, Z=7.5. Width=2, depth=0.2.
+	// When closed (rotation~0): box spans X 1..3, Z 7.4..7.6.
+	// When open (rotation >= 90): door has swung along Z, clear the box
+	// by collapsing it so it never hits the player.
+	//if (doorCollisionIndex >= 0 && doorCollisionIndex < (int)collisionBoxes.size())
+	//{
+	//	float rot = door[0].rotation; // degrees, 0=closed, ~90=fully open
+	//	if (rot >= 85.f)
+	//	{
+	//		// Door fully open — collapse box so it blocks nothing
+	//		collisionBoxes[doorCollisionIndex].min = glm::vec3(0.f, 0.f, 0.f);
+	//		collisionBoxes[doorCollisionIndex].max = glm::vec3(0.f, 0.f, 0.f);
+	//	}
+	//	else
+	//	{
+	//		// Door closed or swinging — keep full blocking box
+	//		// Rotate the door extent around the hinge (X=1, Z=7.5)
+	//		float rad = glm::radians(rot);
+	//		float cosR = cosf(rad);
+	//		float sinR = sinf(rad);
+	//		// Door tip in local space: (width, 0) = (2, 0)
+	//		// After rotation: tip world offset from hinge
+	//		float tipX = 1.f + cosR * 2.f;   // hinge.x + cos(rot)*width
+	//		float tipZ = 7.5f - sinR * 2.f;  // hinge.z - sin(rot)*width (swings toward +Z)
+
+	//		float hingeX = 1.f;
+	//		float hingeZ = 7.5f;
+
+	//		collisionBoxes[doorCollisionIndex].min = glm::vec3(
+	//			std::min(hingeX, tipX) - 0.1f,
+	//			0.125f,
+	//			std::min(hingeZ, tipZ) - 0.1f
+	//		);
+	//		collisionBoxes[doorCollisionIndex].max = glm::vec3(
+	//			std::max(hingeX, tipX) + 0.1f,
+	//			3.875f,
+	//			std::max(hingeZ, tipZ) + 0.1f
+	//		);
+	//	}
 
 	
 	// --- STATE_FIND_GUN: just let player walk around ---
@@ -1357,7 +1396,26 @@ void SceneShooting::BuildCollisionBoxes()
 	counter.max = glm::vec3(10.f, 2.f, 2.5f);
 	collisionBoxes.push_back(counter);
 
-	
+	// Door (dynamic — updated every frame in Update())
+	// Door: position (1, 2, 7.5), width=2, height=3.75, depth=0.2
+	// Closed: X 1..3, Y 0.125..3.875, Z 7.4..7.6
+	/*doorCollisionIndex = (int)collisionBoxes.size();
+	AABB doorBox;
+	doorBox.min = glm::vec3(1.0f, 0.125f, 7.4f);
+	doorBox.max = glm::vec3(3.0f, 3.875f, 7.6f);
+	collisionBoxes.push_back(doorBox);*/
+
+	// Door (closed position - conservative box)
+	AABB doorBox;
+	doorBox.min = glm::vec3(-1.f, 0.f, 7.3f);
+	doorBox.max = glm::vec3(1.f, 4.f, 7.7f);
+	collisionBoxes.push_back(doorBox);
+
+	// Gun on floor
+	AABB gunBox;
+	gunBox.min = gunWorldPos - glm::vec3(0.4f, 0.3f, 0.25f);
+	gunBox.max = gunWorldPos + glm::vec3(0.4f, 0.3f, 0.25f);
+	collisionBoxes.push_back(gunBox);
 }
 
 
@@ -1446,6 +1504,7 @@ void SceneShooting::HandleKeyPress()
 		{
 			gunPickedUp = true;
 			// just picks up gun, player still walks freely
+			collisionBoxes.pop_back(); // removes the gun box (it was last added)
 		}
 
 		// Step 2: walk to counter and press F to start
