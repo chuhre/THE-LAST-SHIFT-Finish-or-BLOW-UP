@@ -76,7 +76,6 @@ void SceneTank::Init()
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
 	// Initialise camera properties
-	//camera.Init(45.f, 45.f, 10.f);
 	camera.Init(
 		glm::vec3(0, 2.1, 8),    // position — slightly inside the room
 		glm::vec3(0, 2, 0),      // target — looking forward into the room
@@ -121,6 +120,7 @@ void SceneTank::Init()
 	meshList[GEO_BOX4]->textureID = LoadTGA("Images//box.tga");
 	meshList[GEO_CABINET] = MeshBuilder::GenerateOBJ("Cabinet", "Models//iron_cabinet.obj");
 	meshList[GEO_CABINET]->textureID = LoadTGA("Images//iron_cabinet_MT_BaseColor.1002.tga");
+	meshList[GEO_BALLOON] = MeshBuilder::GenerateOBJ("Balloon", "Models//balloon.obj");
 
 	// text
 	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
@@ -130,9 +130,10 @@ void SceneTank::Init()
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 20.f);  // dark wood brown
 
 	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f); // light tan canvas
+	meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
 
 	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);   // carnival cream
-																													   // scaled per-wall in Render()
+	meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");																					   // scaled per-wall in Render()
 
 
 	// Skybox NIGHT
@@ -172,35 +173,13 @@ void SceneTank::Init()
 	ballPhys.mass = 0.5f;
 	ballPhys.bounciness = 0.3f;
 
-	//// collision objects (position, mass)
-	//// Walls
-	//wallBack.pos = Vector3(0.f, 4.f, -7.5f);  wallBack.mass = 0.f;
-	//wallLeft.pos = Vector3(-10.f, 4.f, 0.f);  wallLeft.mass = 0.f;
-	//wallRight.pos = Vector3(10.f, 4.f, 0.f);   wallRight.mass = 0.f;
-	//wallCeiling.pos = Vector3(0.f, 8.f, 0.f);    wallCeiling.mass = 0.f;
-
-	//// Objects
-	//objCounter.pos = Vector3(0.f, 0.5f, 3.f);    objCounter.mass = 0.f;
-	//objPillar.pos = Vector3(2.5f, 1.f, 0.f);    objPillar.mass = 0.f;
-	//objTank.pos = Vector3(-5.5f, 2.f, 0.f);   objTank.mass = 0.f;
-	//objCabinet.pos = Vector3(8.9f, 0.f, -5.f);   objCabinet.mass = 0.f;
-	//objBox1.pos = Vector3(-8.9f, 0.5f, -3.f); objBox1.mass = 0.f;
-	//objBox2.pos = Vector3(-8.9f, 1.56f, -3.f); objBox2.mass = 0.f;
-	//objBox3.pos = Vector3(-7.9f, 0.5f, -2.f); objBox3.mass = 0.f;
-	//objBox4.pos = Vector3(-7.9f, 0.5f, -4.f); objBox4.mass = 0.f;
-
 	// target phys — position matches render Translate exactly
-	objTarget.pos = Vector3(3.5f, 3.f, 0.f);
-	objTarget.mass = 0.f;
-
-	// ANIMATIONS
-
-
-
+	//objTarget.pos = Vector3(3.5f, 3.f, 0.f);
+	//objTarget.mass = 0.f;
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
-	light[0].position = glm::vec3(0, 5, 0);
+	light[0].position = glm::vec3(0, 6, 3);
 	light[0].color = glm::vec3(1, 1, 1);
 	light[0].type = Light::LIGHT_POINT;
 	light[0].power = 1;
@@ -328,7 +307,7 @@ void SceneTank::BuildCollisionBoxes()
 void SceneTank::Update(double dt)
 {
 	HandleKeyPress();
-	HandleMouseInput();
+	//HandleMouseInput();
 
 	if (KeyboardController::GetInstance()->IsKeyDown('I'))
 		light[0].position.z -= static_cast<float>(dt) * 5.f;
@@ -415,14 +394,6 @@ void SceneTank::Update(double dt)
 			isCharging = false;
 			throwPower = 0.f;
 		}
-
-		//// Drop with E
-		//if (KeyboardController::GetInstance()->IsKeyPressed('E'))
-		//{
-		//	ballPhys.pos = Vector3(ballRestPos.x, ballRestPos.y, ballRestPos.z);
-		//	ballPhys.accel = Vector3(0, -9.8f, 0);
-		//	ballState = THROWN;
-		//}
 	}
 
 	// --- IN FLIGHT ---
@@ -489,9 +460,7 @@ void SceneTank::Update(double dt)
 			}
 		}
 
-		// Target AABB — tune these half-extents to match the visual size
-		// Target is at (3.5, 3.0, 0), scaled 1.5x, so roughly 0.6 wide/tall
-	
+		// Target — only check hit if not already hit, to prevent multiple hits while ball is inside
 		float rad = glm::radians(targetRotation);
 
 		// mirror exact same transforms as Render:
@@ -629,21 +598,14 @@ void SceneTank::Update(double dt)
 	if (dummyFalling)
 	{
 		// Tip forward (rotate around X) and drop down
-		//dummyFallAngle += static_cast<float>(dt) * 90.f;   // degrees per second
 		dummyFallY -= static_cast<float>(dt) * 20.f;    // drop speed
 		if (dummyFallY < -10.f)
 			dummyFallY = -10.f;
-		/*if (dummyFallAngle >= 90.f)
-		{
-			dummyFallAngle = 90.f;
-			dummyFalling = false;
-			dummyInTank = true;
-		}*/
+
 	}
 
 	//Door interaction
-	showInteractPrompt = false;
-	showLockedPrompt = false;
+
 	if (door.IsPlayerNear(camera.position, 2.5f))
 	{
 		if (gameState == STATE_WON)
@@ -726,14 +688,6 @@ void SceneTank::Render()
 	RenderMesh(meshList[GEO_AXES], false);
 	modelStack.PopMatrix();
 
-	modelStack.PushMatrix();
-	// Render light
-	modelStack.Translate(light[0].position.x, light[0].position.y, light[0].position.z);
-	modelStack.Scale(0.1f, 0.1f, 0.1f);
-	RenderMesh(meshList[GEO_SPHERE], false);
-	modelStack.PopMatrix();
-
-
 	// render tests
 
 	modelStack.PushMatrix();                        // >>> BOOTH ROOT
@@ -777,6 +731,7 @@ void SceneTank::Render()
 	modelStack.Scale(0.3f, 8.f, 20.f);
 	RenderMesh(meshList[GEO_WALL], true);       // reuses same mesh + material
 	modelStack.PopMatrix();                     // <<< Left Wall
+	
 	// ---- RIGHT WALL ----
 	modelStack.PushMatrix();                    // >>> Right Wall
 	modelStack.Translate(10.f, 4.f, 0.f);
@@ -803,6 +758,32 @@ void SceneTank::Render()
 	modelStack.Translate(0.f, 6.f, 10.f);
 	modelStack.Scale(2.f, 4.0f, 0.3f);
 	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// balloon 1
+	modelStack.PushMatrix();
+	modelStack.Translate(8.3f, 5.f, 2.f);
+	modelStack.Scale(0.5f, 0.5f, 0.5f);
+
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+
+	RenderMesh(meshList[GEO_BALLOON], true);
+	modelStack.PopMatrix();
+
+	// balloon2
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.3f, 5.f, 2.f);
+	modelStack.Scale(0.5f, 0.5f, 0.5f);
+
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.4f, 0.0f, 0.0f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(1.0f, 0.1f, 0.1f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(1.0f, 0.8f, 0.8f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+
+	RenderMesh(meshList[GEO_BALLOON], true);
 	modelStack.PopMatrix();
 
 	// door
@@ -1049,12 +1030,14 @@ void SceneTank::Render()
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT], "Hit the target to defuse bomb!",
 			glm::vec3(0.3f, 1.f, 0.3f), 23, 40, 560);
+		RenderTextOnScreen(meshList[GEO_TEXT], "Ball can be picked up multiple times till target is hit",
+			glm::vec3(1.f, 1.f, 1.f), 13, 35, 530);
 
 		// timer
 		char timerBuf[32];
 		sprintf_s(timerBuf, "TIME: %.1f", gameTimer);
 		glm::vec3 timerColor = (gameTimer <= 10.f) ? glm::vec3(1, 0, 0) : glm::vec3(1, 1, 1);
-		RenderTextOnScreen(meshList[GEO_TEXT], timerBuf, timerColor, 30, 250, 530);
+		RenderTextOnScreen(meshList[GEO_TEXT], timerBuf, timerColor, 30, 250, 500);
 
 		if (ballState == ON_COUNTER)
 		{
@@ -1079,18 +1062,14 @@ void SceneTank::Render()
 				glm::vec3(1, 0.3f, 0.3f), 30, 120, 60);
 		}
 
-		if (ballState == THROWN)
-			RenderTextOnScreen(meshList[GEO_TEXT], "Ball in flight!",
-				glm::vec3(0.3f, 1.f, 0.3f), 30, 200, 100);
-	
 	}
 
 	if (gameState == STATE_LOST)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT], "Time's up! Bomb exploded!",
-			glm::vec3(1.f, 0.f, 0.f), 25, 150, 300);
+			glm::vec3(1.f, 0.f, 0.f), 25, 120, 300);
 		RenderTextOnScreen(meshList[GEO_TEXT], "[R] Try Again",
-			glm::vec3(1.f, 1.f, 0.f), 25, 250, 250);
+			glm::vec3(1.f, 1.f, 0.f), 25, 230, 250);
 	}
 
 	if (gameState == STATE_WON)
@@ -1110,21 +1089,6 @@ void SceneTank::Render()
 		RenderTextOnScreen(meshList[GEO_TEXT], "Win the game first!", glm::vec3(1.f, 0.f, 0.f), 30, 50, 30);
 
 	modelStack.PopMatrix();                         // <<< BOOTH ROOT
-
-	for (const AABB& box : collisionBoxes)
-	{
-		glm::vec3 center = (box.min + box.max) * 0.5f;
-		glm::vec3 size = box.max - box.min;
-		modelStack.PushMatrix();
-		modelStack.Translate(center.x, center.y, center.z);
-		modelStack.Scale(size.x, size.y, size.z);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		glDisable(GL_CULL_FACE);
-		RenderMesh(meshList[GEO_CUBE], false);
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		glEnable(GL_CULL_FACE);
-		modelStack.PopMatrix();
-	}
 }
 
 void SceneTank::RenderMesh(Mesh* mesh, bool enableLight)
@@ -1356,37 +1320,6 @@ void SceneTank::HandleKeyPress()
 		}
 	}
 }
-
-void SceneTank::HandleMouseInput() {
-	//static bool isLeftUp = false;
-	//static bool isRightUp = false;
-
-	//// Process Left button
-	//if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
-	//{
-	//	isLeftUp = true;
-	//	std::cout << "LBUTTON DOWN" << std::endl;
-
-	//	// transform into UI space
-	//	double x = MouseController::GetInstance()->GetMousePositionX();
-	//	double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
-
-	//	// Check if mouse click position is within the GUI box
-	//	// Change the boundaries as necessary
-	//	if (x > 0 && x < 100 && y > 0 && y < 100) {
-	//		std::cout << "GUI IS CLICKED" << std::endl;
-	//	}
-
-	//}
-	//else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
-	//{
-	//	isLeftUp = false;
-	//	std::cout << "LBUTTON UP" << std::endl;
-	//}
-
-	//// Continue to do for right button
-}
-
 
 
 void SceneTank::RenderText(Mesh* mesh, std::string text, glm::vec3

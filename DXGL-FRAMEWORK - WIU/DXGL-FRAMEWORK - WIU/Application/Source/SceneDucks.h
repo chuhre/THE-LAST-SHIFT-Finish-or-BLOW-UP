@@ -111,7 +111,7 @@ public:
 		U_TOTAL,
 	};
 
-	enum GameState { STATE_FIND_HOOK, STATE_PLAYING, STATE_WON };
+	enum GameState { STATE_FIND_HOOK, STATE_PLAYING, STATE_WON, STATE_LOST};
 	GameState gameState = STATE_FIND_HOOK;
 
 	bool hookPickedUp = false;
@@ -178,6 +178,8 @@ private:
 	bool isDoorOpen;
 	glm::vec3 doorPosition;
 	bool IsPlayerNearDoor(float radius);
+	bool showInteractPrompt;
+	bool showLockedPrompt;
 
 	// light switch
 	glm::vec3 lightSwitchPosition;
@@ -204,13 +206,12 @@ private:
 	glm::vec3 savedCamTarget;   // FP target saved before entering top-down
 	glm::vec3 savedCamUp;       // FP up saved before entering top-down
 
-
+	float bombTimer;
 	float fps = 0;
 
 	// door
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
-	bool showInteractPrompt;
 
 
 	// Collision detection

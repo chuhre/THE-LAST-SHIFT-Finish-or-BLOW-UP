@@ -33,10 +33,10 @@ static float RandRange(float lo, float hi)
 	return lo + (hi - lo) * (static_cast<float>(rand()) / static_cast<float>(RAND_MAX));
 }
 
-SceneDucks::SceneDucks() 
+SceneDucks::SceneDucks()
 {
 }
-SceneDucks::~SceneDucks() 
+SceneDucks::~SceneDucks()
 {
 }
 
@@ -128,7 +128,6 @@ void SceneDucks::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
 
-
 	meshList[GEO_POOL] = MeshBuilder::GenerateOBJ("Pool", "Models//pool.obj");
 	meshList[GEO_POOL]->textureID = LoadTGA("Images//pool1.tga");
 	meshList[GEO_WATER] = MeshBuilder::GenerateSphere("Water", glm::vec3(0.1f, 0.4f, 0.8f), 1.f, 32);
@@ -142,12 +141,12 @@ void SceneDucks::Init()
 	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
 	meshList[GEO_GUI] = MeshBuilder::GenerateQuad("GUI", glm::vec3(1, 1, 1), 1.f);
 
-	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor",glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
-	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling",glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
 	meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
-	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall",glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);
 	meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");
-	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter",glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
+	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
 	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
 
 	meshList[GEO_BALLOON] = MeshBuilder::GenerateOBJ("Balloon", "Models//balloon.obj");
@@ -161,21 +160,29 @@ void SceneDucks::Init()
 	meshList[GEO_TOYPLANE]->textureID = LoadTGA("Images//toyplane.tga");
 	meshList[GEO_DUCKBASKETBALL] = MeshBuilder::GenerateOBJ("Duckbasketball", "Models//duckbasketball.obj");
 
-
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
 
 	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
+	// Game state
 	gameState = STATE_FIND_HOOK;
 	hookPickedUp = false;
 	hookWorldPos = glm::vec3(9.5, -1.85f, 10.5f);
 	ducksPickedUp = 0;
 	catchTimer = 0.f;
+	bombTimer = 30.0f;
+
+	//1.f, 2.f, 17.5f), 2.f, 3.75f
+
+	// Door setup — position at the back doorway (z = 17.5)
+	door[0] = { glm::vec3(0.f, 1.f, 0.f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+	// Door prompt flags
+	showInteractPrompt = false;
+	showLockedPrompt = false;
 
 	InitDucks();
-	BuildCollisionBoxes(); 
-
+	BuildCollisionBoxes();
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
@@ -351,6 +358,41 @@ void SceneDucks::Update(double dt)
 		wrongTimer -= static_cast<float>(dt);
 
 	UpdateDucks(static_cast<float>(dt));
+
+	// Bomb timer
+	if (gameState == STATE_PLAYING)
+	{
+		bombTimer -= static_cast<float>(dt);
+		if (bombTimer <= 0.f)
+		{
+			bombTimer = 0.f;
+			gameState = STATE_LOST;
+		}
+	}
+
+	// Door interaction
+	showInteractPrompt = false;
+	showLockedPrompt = false;
+
+	glm::vec3 doorwayPos = glm::vec3(0.f, 2.f, 15.f); // adjust Z to match where the doorway opening is
+
+	if (glm::distance(camera.position, doorwayPos) < 2.5f)
+	{
+		if (gameState == STATE_WON)
+			showInteractPrompt = true;
+		else
+			showLockedPrompt = true;
+	}
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
+	}
+	if (door[0].Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
+	{
+		SceneManager::GetInstance()->SwitchScene(door[0].leadsTo);
+		door[0].Close();
+		showInteractPrompt = false;
+	}
 }
 
 void SceneDucks::RenderDucks()
@@ -478,7 +520,7 @@ void SceneDucks::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
-	//back wall L
+	// back wall L
 	modelStack.PushMatrix();
 	modelStack.Translate(5.5f, 1.5f, 17.5f);
 	modelStack.Scale(9.f, 9.f, 0.3f);
@@ -489,7 +531,7 @@ void SceneDucks::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
-	//back wall R
+	// back wall R
 	modelStack.PushMatrix();
 	modelStack.Translate(-5.5f, 1.5f, 17.5f);
 	modelStack.Scale(9.f, 9.f, 0.3f);
@@ -500,24 +542,24 @@ void SceneDucks::Render()
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
-	//door frame
+	// door frame
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 3.8f, 17.5f);
+	modelStack.Translate(0.f, 4.8f, 17.5f);
 	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
 	modelStack.Scale(0.29f, 4.24f, 3.9f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
-	//render main door
+	// render main door
 	modelStack.PushMatrix();
 	modelStack.Translate(door[0].position.x, door[0].position.y, door[0].position.z);
 	modelStack.Rotate(door[0].rotation, 0, 1, 0);
 	modelStack.Rotate(180, 0, 1, 0);
-	modelStack.Translate(0, 0.f, -17.5f);
-	modelStack.Scale(door[0].width * 1.35, door[0].height * 1.48, 0.2f);
-	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
-	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	modelStack.Translate(0, 0.5f, -17.5f);
+	modelStack.Scale(door[0].width * 1.35, door[0].height * 1.85, 0.2f);
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.3f, 0.3f, 0.3f);
 	RenderMesh(meshList[GEO_DOOR], true);
 	modelStack.PopMatrix();
 
@@ -773,24 +815,8 @@ void SceneDucks::Render()
 		modelStack.PopMatrix();
 	}
 
-	//// DEBUG: draw collision boxes as wireframes
-	//for (const DAABB& box : collisionBoxes)
-	//{
-	//	glm::vec3 center = (box.min + box.max) * 0.5f;
-	//	glm::vec3 size = box.max - box.min;
+	// ==================== HUD ====================
 
-	//	modelStack.PushMatrix();
-	//	modelStack.Translate(center.x, center.y, center.z);
-	//	modelStack.Scale(size.x, size.y, size.z);
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-	//	glDisable(GL_CULL_FACE);
-	//	RenderMesh(meshList[GEO_CUBE], false);
-	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-	//	glEnable(GL_CULL_FACE);
-	//	modelStack.PopMatrix();
-	//}
-
-	// HUD
 	if (gameState == STATE_FIND_HOOK)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
@@ -799,6 +825,7 @@ void SceneDucks::Render()
 			RenderTextOnScreen(meshList[GEO_TEXT],
 				"[F] Pick up Hook", glm::vec3(1, 1, 1), 30.f, 180.f, 180.f);
 	}
+
 	if (gameState == STATE_PLAYING)
 	{
 		char buf[32];
@@ -810,11 +837,8 @@ void SceneDucks::Render()
 				"[E] Play Duck Game", glm::vec3(1, 1, 0), 30.f, 130.f, 60.f);
 
 		if (isTopDown)
-		{
-			//RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
 			RenderTextOnScreen(meshList[GEO_TEXT],
 				"[E] Exit Duck Game", glm::vec3(1, 1, 0), 30.f, 130.f, 60.f);
-		}
 
 		if (catchTimer > 0.f)
 			RenderTextOnScreen(meshList[GEO_TEXT],
@@ -823,14 +847,39 @@ void SceneDucks::Render()
 		if (wrongTimer > 0.f)
 			RenderTextOnScreen(meshList[GEO_TEXT],
 				"WRONG DUCK!", glm::vec3(1, 0, 0), 50.f, 260.f, 400.f);
+
+		// Bomb timer
+		int  minutes = (int)(bombTimer / 60.f);
+		int  seconds = (int)(bombTimer) % 60;
+		char timerBuf[32];
+		sprintf_s(timerBuf, "TIME: %d:%02d", minutes, seconds);
+		glm::vec3 timerColor = (bombTimer <= 10.f) ? glm::vec3(1, 0, 0) : glm::vec3(1, 1, 1);
+		RenderTextOnScreen(meshList[GEO_TEXT], timerBuf, timerColor, 30.f, 30.f, 120.f);
 	}
-	if (gameState == STATE_WON)
+
+	if (gameState == STATE_WON && isTopDown)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"BOMB DEFUSED!!!", glm::vec3(0, 1, 0), 40.f, 200.f, 400.f);
+			"BOMB DEFUSED!!!", glm::vec3(0, 1, 0), 40.f, 100.f, 400.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"[R] Return to Lobby", glm::vec3(1, 1, 0), 30.f, 220.f, 340.f);
+			"Head to the door to leave!", glm::vec3(1, 1, 0), 30.f, 80.f, 340.f);
 	}
+
+	if (gameState == STATE_LOST)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 60.f, 100.f, 340.f);
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"[R] Try Again", glm::vec3(1, 1, 0), 35.f, 100.f, 250.f);
+	}
+
+	// Door prompts (shown regardless of game state)
+	if (showInteractPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"[F] Exit to Lobby", glm::vec3(1, 1, 1), 30.f, 90.f, 50.f);
+	else if (showLockedPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT],
+			"You need to win the game first!", glm::vec3(1, 0, 0), 30.f, 50.f, 50.f);
 }
 
 void SceneDucks::RenderMesh(Mesh* mesh, bool enableLight)
@@ -1026,22 +1075,25 @@ void SceneDucks::HandleKeyPress()
 
 	if (KeyboardController::GetInstance()->IsKeyPressed(GLFW_KEY_TAB))
 	{
-		if (light[0].type == Light::LIGHT_POINT)             light[0].type = Light::LIGHT_DIRECTIONAL;
-		else if (light[0].type == Light::LIGHT_DIRECTIONAL)  light[0].type = Light::LIGHT_SPOT;
-		else                                                  light[0].type = Light::LIGHT_POINT;
+		if (light[0].type == Light::LIGHT_POINT)            light[0].type = Light::LIGHT_DIRECTIONAL;
+		else if (light[0].type == Light::LIGHT_DIRECTIONAL) light[0].type = Light::LIGHT_SPOT;
+		else                                                 light[0].type = Light::LIGHT_POINT;
 		glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
 	}
 
+	// F key: pick up hook (only in STATE_FIND_HOOK)
+	// Door open (F near door in STATE_WON) is handled in Update()
 	if (KeyboardController::GetInstance()->IsKeyPressed('F'))
 	{
 		if (gameState == STATE_FIND_HOOK && IsPlayerNearHook(5.0f))
 		{
 			hookPickedUp = true;
 			gameState = STATE_PLAYING;
+			bombTimer = 30.0f;
 		}
 	}
 
-	// E  enter/exit top-down pool view (only when holding hook and near pool)
+	// E: enter/exit top-down pool view
 	if (KeyboardController::GetInstance()->IsKeyPressed('E'))
 	{
 		if (!isTopDown && hookPickedUp && IsPlayerNearPool(7.f))
@@ -1055,8 +1107,6 @@ void SceneDucks::HandleKeyPress()
 			camera.up = glm::vec3(0.f, 0.f, -1.f);
 
 			isTopDown = true;
-
-			// Show cursor so player can click ducks
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 		}
 		else if (isTopDown)
@@ -1066,67 +1116,37 @@ void SceneDucks::HandleKeyPress()
 			camera.up = savedCamUp;
 
 			isTopDown = false;
-
-			// Re-hide cursor for FP mode
 			glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 		}
 	}
 
+	// R: reset in place (only for non-won states; STATE_WON uses the door)
 	if (KeyboardController::GetInstance()->IsKeyPressed('R'))
 	{
-		if (gameState == STATE_WON)
+		if (gameState == STATE_LOST || gameState == STATE_PLAYING || gameState == STATE_FIND_HOOK)
 		{
-			SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
-			// Reset all game state to default
 			gameState = STATE_FIND_HOOK;
 			hookPickedUp = false;
 			ducksPickedUp = 0;
 			catchTimer = 0.f;
 			wrongTimer = 0.f;
+			bombTimer = 30.0f;
 
-			// Re-randomise ducks properly
 			InitDucks();
 
-			// Restore FP camera to starting position
 			camera.Init(
-				glm::vec3(0, 2.1f, 10),
-				glm::vec3(0, 2, 0),
+				glm::vec3(0, 1.8f, 10),
+				glm::vec3(0, 1.7f, 0),
 				glm::vec3(0, 1.0f, 0)
 			);
 
-			// Exit top-down mode if active and re-hide cursor
 			if (isTopDown)
 			{
 				isTopDown = false;
 				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 			}
 		}
-		else
-		{
-			// Reset all game state to default
-			gameState = STATE_FIND_HOOK;
-			hookPickedUp = false;
-			ducksPickedUp = 0;
-			catchTimer = 0.f;
-			wrongTimer = 0.f;
-
-			// Re-randomise ducks properly
-			InitDucks();
-
-			// Restore FP camera to starting position
-			camera.Init(
-				glm::vec3(0, 2.1f, 10),
-				glm::vec3(0, 2, 0),
-				glm::vec3(0, 1.0f, 0)
-			);
-
-			// Exit top-down mode if active and re-hide cursor
-			if (isTopDown)
-			{
-				isTopDown = false;
-				glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			}
-		}
+		// STATE_WON: R intentionally does nothing — player must use the door
 	}
 }
 
@@ -1135,26 +1155,20 @@ void SceneDucks::HandleMouseInput()
 	static bool wasLeftDown = false;
 	bool isLeftDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
 
-	// Only process a fresh click (not held)
 	if (isLeftDown && !wasLeftDown)
 	{
-		// Only do duck picking while in top-down mode
 		if (isTopDown && gameState == STATE_PLAYING)
 		{
-			// Get raw mouse position (pixels, top-left origin)
 			double mx = MouseController::GetInstance()->GetMousePositionX();
 			double my = MouseController::GetInstance()->GetMousePositionY();
 
-			// Convert to NDC [-1, 1]
 			float ndcX = (static_cast<float>(mx) / 1920.f) * 2.f - 1.f;
 			float ndcY = 1.f - (static_cast<float>(my) / 1080.f) * 2.f;
 
-			// Unproject through inverse VP to get world-space ray direction
 			glm::mat4 proj = projectionStack.Top();
 			glm::mat4 view = viewStack.Top();
 			glm::mat4 invVP = glm::inverse(proj * view);
 
-			// Near and far points in clip space
 			glm::vec4 nearClip(ndcX, ndcY, -1.f, 1.f);
 			glm::vec4 farClip(ndcX, ndcY, 1.f, 1.f);
 
@@ -1166,7 +1180,6 @@ void SceneDucks::HandleMouseInput()
 			glm::vec3 rayOrigin(nearWorld);
 			glm::vec3 rayDir = glm::normalize(glm::vec3(farWorld) - rayOrigin);
 
-			// Plane: y = -1.2   t = (-1.2 - rayOrigin.y) / rayDir.y
 			float planeY = -1.2f;
 			float hitX = 0.f, hitZ = 0.f;
 			bool  validHit = false;
@@ -1184,8 +1197,6 @@ void SceneDucks::HandleMouseInput()
 
 			if (validHit)
 			{
-				// Duck collision radius in world space (duck is scaled 0.01,
-				// so a click-zone of ~0.4 world units feels natural)
 				const float CLICK_RADIUS = 0.4f;
 
 				for (int i = 0; i < NUM_DUCKS; ++i)
@@ -1199,21 +1210,22 @@ void SceneDucks::HandleMouseInput()
 
 					if (distSq <= CLICK_RADIUS * CLICK_RADIUS)
 					{
-						// Hit! Check if it's a correct duck
 						if (d.isCorrect)
 						{
 							d.caught = true;
 							ducksPickedUp++;
-							catchTimer = 1.5f;   // "GOT ONE!" flash
+							catchTimer = 1.5f;
+							wrongTimer = 0.f;
 
 							if (ducksPickedUp >= MAX_DUCKS)
 								gameState = STATE_WON;
 						}
 						else
 						{
-							wrongTimer = 1.5f;   // "WRONG DUCK!" flash
+							wrongTimer = 1.5f;
+							catchTimer = 0.f;
 						}
-						break; // only one duck per click
+						break;
 					}
 				}
 			}
@@ -1296,4 +1308,10 @@ void SceneDucks::BuildCollisionBoxes()
 	poolBack.min = glm::vec3(-3.8f, -2.5f, 3.2f);
 	poolBack.max = glm::vec3(3.8f, 1.5f, 3.8f);
 	collisionBoxes.push_back(poolBack);
+
+	// Door (z = 17.5, center gap between back wall L and R)
+	DAABB doorBox;
+	doorBox.min = glm::vec3(-1.f, -2.f, 17.3f);
+	doorBox.max = glm::vec3(1.f, 8.f, 17.6f);
+	collisionBoxes.push_back(doorBox);
 }

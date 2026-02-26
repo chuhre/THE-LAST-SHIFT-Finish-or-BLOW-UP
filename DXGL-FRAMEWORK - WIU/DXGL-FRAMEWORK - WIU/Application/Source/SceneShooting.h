@@ -45,6 +45,13 @@ public:
 		GEO_BOMB,           // bomb sitting on the counter
 		GEO_GUN,            // the MISSING item the player must find
 
+		GEO_CURTAIN,
+		GEO_BALLOON,
+		GEO_LIGHT_STRING,
+		GEO_BOX,
+		GEO_CRATE,
+	
+
 		// HUD
 		GEO_GUI,            
 		GEO_TEXT,
