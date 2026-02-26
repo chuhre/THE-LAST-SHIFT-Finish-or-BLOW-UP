@@ -328,16 +328,15 @@ void SceneCans::Update(double dt)
 
 			// Snap to aiming position
 			camera.position = AIM_CAM_POS;
+			camera.target = AIM_CAM_TARGET;
 			camera.up = glm::vec3(0.f, 1.f, 0.f);
 
 			// Reset aim to point roughly at the cans
-			m_aimPitch = 30.f;
+			m_aimPitch = 75.f;
 			m_aimZOffset = 0.f;
 			m_aimDir = glm::normalize(glm::vec3(
 				cos(glm::radians(m_aimPitch)), sin(glm::radians(m_aimPitch)), 0.f
 			));
-			m_dynamicAimTarget = AIM_CAM_POS + glm::vec3(6.f, 1.5f, 0.f);
-			camera.target = m_dynamicAimTarget;
 
 			m_isAiming = true;
 		}
@@ -346,6 +345,12 @@ void SceneCans::Update(double dt)
 	{
 		showBoothPrompt = false;
 	}
+
+
+
+	std::cout << "pos" << camera.position.x << "   " << camera.position.y << "   " << camera.position.z << std::endl;
+	std::cout << "targ" << camera.target.x << "   " << camera.target.y << "   " << camera.target.z << std::endl;
+
 }
 
 void SceneCans::Render()
@@ -724,7 +729,10 @@ void SceneCans::Render()
 	// Only show aim line when game is active and ball not in air
     if (gameState == GAME_PLAYING && !m_balls->inAir)
         DrawAimLine();
-	DrawRayCastLine();
+
+	if (!m_isAiming)
+		DrawRayCastLine();
+
 	RenderHUD();
 }
 
@@ -941,51 +949,25 @@ void SceneCans::HandleKeyPress()
 void SceneCans::HandleMouseInput() 
 {
 
-	if (m_isAiming)
+	if (!m_isAiming) return;
+
+	static bool wasDown = false;
+	bool isDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
+
+	if (isDown && !wasDown)
 	{
-		// RMB held = adjust aim
-		if (MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_RIGHT))
+		wasDown = true;
+		if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls[0].inAir)
 		{
-			double dx = MouseController::GetInstance()->GetMouseDeltaX();
-			double dy = MouseController::GetInstance()->GetMouseDeltaY();
-
-			float sensitivity = 0.15f;
-
-			// Mouse Y controls throw angle (pitch) — up = higher arc
-			m_aimPitch += (float)dy * sensitivity;
-			m_aimPitch = glm::clamp(m_aimPitch, -20.f, 20.f);  // keep arc reasonable
-
-			// Mouse X shifts Z — lets player target different cans in the row
-			m_aimZOffset -= (float)dx * sensitivity * 0.05f;
-			m_aimZOffset = glm::clamp(m_aimZOffset, -5.f, -4.f);
+			LaunchBall();
+			camera.position = m_savedCamPos;
+			camera.target = m_savedCamTarget;
+			camera.up = m_savedCamUp;
+			m_isAiming = false;
 		}
-
-		// Recompute aim direction: launching rightward (+X), angled up by pitch
-		// Z offset steers toward front/back cans
-		m_aimDir = glm::normalize(glm::vec3(
-			cos(glm::radians(m_aimPitch)),   // rightward component
-			sin(glm::radians(m_aimPitch)),   // upward arc
-			m_aimZOffset                     // side-to-side targeting
-		));
-
-		
-		// LMB = throw
-		static bool wasDown = false;
-		bool isDown = MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT);
-		if (isDown && !wasDown)
-		{
-			wasDown = true;
-			if (gameState == GAME_PLAYING && m_throwsLeft > 0 && !m_balls->inAir)
-			{
-				LaunchBall();
-				camera.position = m_savedCamPos;
-				camera.target = m_savedCamTarget;
-				camera.up = m_savedCamUp;
-				m_isAiming = false;
-			}
-		}
-		wasDown = isDown;
 	}
+	wasDown = isDown;
+
 }
 
 
@@ -1366,18 +1348,17 @@ void SceneCans::LaunchBall()
 
 	if (m_noOfBalls < 0) m_noOfBalls == 0;
 
-	float launchSpeed = 14.f;
+	// Direction from launch point toward where the line ends
+	glm::vec3 dir = glm::normalize(m_aimWorldTarget - glm::vec3(LAUNCH_POS));
+	float launchSpeed = 35.f;
 
-	// Start ball at the launch point on the left side
-	m_balls->ball.pos = Vector3(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z + m_aimZOffset);
-
-	// Velocity driven by pitch angle — flies rightward in an arc
-	m_balls->ball.vel = Vector3(
-		m_aimDir.x * launchSpeed,
-		m_aimDir.y * launchSpeed,       // arc height set by pitch
-		m_aimDir.z * launchSpeed * 0.5f // gentle Z steering
+	m_balls[0].ball.pos = Vector3(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z);
+	m_balls[0].ball.vel = Vector3(
+		dir.x * launchSpeed,
+		dir.y * launchSpeed,
+		dir.z * launchSpeed
 	);
-	m_balls->inAir = true;
+	m_balls[0].inAir = true;
 }
 
 void SceneCans::ResetGame()
@@ -1398,30 +1379,60 @@ void SceneCans::DrawAimLine()
 	if (!m_isAiming) return;
 
 
-	float launchSpeed = 14.f;
+	// Get current mouse position on screen
+	double mouseX = MouseController::GetInstance()->GetMousePositionX();
+	double mouseY = MouseController::GetInstance()->GetMousePositionY();
 
-	glm::vec3 pos(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z + m_aimZOffset);
-	glm::vec3 vel(
-		m_aimDir.x * launchSpeed,
-		m_aimDir.y * launchSpeed,
-		m_aimDir.z * launchSpeed * 0.5f
-	);
+	// Convert screen position to NDC (-1 to 1)
+	float ndcX = (2.f * (float)mouseX / 1920.f) - 1.f;
+	float ndcY = -(2.f * (float)mouseY / 1080.f) + 1.f;  // flip Y
 
-	const float SIM_DT = 0.04f;
-	const int MAX_STEPS = 60;
+	// Reconstruct the aim camera's projection and view matrices
+	glm::mat4 proj = glm::perspective(45.f, 16.f / 9.f, 0.1f, 1000.f);
+	glm::mat4 view = glm::lookAt(AIM_CAM_POS, AIM_CAM_TARGET, glm::vec3(0, 1, 0));
+
+	// Unproject mouse into a world-space ray
+	glm::vec4 rayClip(ndcX, ndcY, -1.f, 1.f);
+	glm::vec4 rayEye = glm::inverse(proj) * rayClip;
+	rayEye = glm::vec4(rayEye.x, rayEye.y, -1.f, 0.f);
+	glm::vec3 rayDir = glm::normalize(glm::vec3(glm::inverse(view) * rayEye));
+
+	// --- Step 3: Intersect ray with vertical plane at Z
+	const float CAN_Z = 1.5f;
+	if (std::abs(rayDir.z) < 0.0001f) return;  // ray is parallel to plane, skip
+	float t = (CAN_Z - AIM_CAM_POS.z) / rayDir.z;
+	if (t <= 0.f) return;
+
+	glm::vec3 aimTarget = AIM_CAM_POS + t * rayDir;
+	aimTarget.y = glm::clamp(aimTarget.y, 0.f, 8.f);
+	aimTarget.x = glm::clamp(aimTarget.x, -5.f, 5.f);
+
+	// Store for LaunchBall to use
+	m_aimWorldTarget = aimTarget;
+
+	// --- Step 4: Simulate parabolic arc with gravity toward aimTarget ---
+	float launchSpeed = 20.f;
+	glm::vec3 dir = glm::normalize(aimTarget - glm::vec3(LAUNCH_POS));
+	m_aimWorldTarget = aimTarget;
+
+	glm::vec3 pos(LAUNCH_POS.x, LAUNCH_POS.y, LAUNCH_POS.z);
+	glm::vec3 vel = dir * launchSpeed;  // initial velocity toward mouse target
+
+	const float SIM_DT = 0.03f;
+	const int MAX_STEPS = 100;
 	const float FLOOR_Y = 0.3f;
 
 	for (int i = 0; i < MAX_STEPS; ++i)
 	{
-		vel.y += GRAVITY * SIM_DT;
+		vel.y += GRAVITY * SIM_DT;  // gravity bends it into a parabola
 		pos += vel * SIM_DT;
 
-		if (pos.y < FLOOR_Y) break;
+		if (pos.y < FLOOR_Y) break;  // stop drawing when it hits the floor
 
-		if (i % 2 != 0) continue;  // every other step = spaced dots
+		if (i % 2 != 0) continue;   // skip every other step for spaced dots
 
 		float t = (float)i / MAX_STEPS;
-		float size = glm::mix(0.1f, 0.03f, t);  // dots shrink along path
+		float size = glm::mix(0.08f, 0.04f, t);  // dots shrink along path
 
 		glm::vec3 color = glm::mix(
 			glm::vec3(1.f, 1.f, 0.f),   // yellow at start
