@@ -75,7 +75,7 @@
     <ClCompile Include="Source\SceneMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Source\PauseMenu.cpp">
+    <ClCompile Include="Source\SceneCutscene.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -152,7 +152,7 @@
     <ClInclude Include="Source\SceneMenu.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Source\PauseMenu.h">
+    <ClInclude Include="Source\SceneCutscene.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

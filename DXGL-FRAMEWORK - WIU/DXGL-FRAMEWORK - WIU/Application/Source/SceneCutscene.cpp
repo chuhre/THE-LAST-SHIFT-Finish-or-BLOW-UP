@@ -1,4 +1,4 @@
-﻿#include "SceneMenu.h"
+﻿#include "SceneCutscene.h"
 
 #include "GL\glew.h"
 #include <glm\glm.hpp>
@@ -7,7 +7,6 @@
 #include <glm\gtc\matrix_inverse.hpp>
 #include <GLFW/glfw3.h>
 
-#include <iostream>
 #include <string>
 
 #include "shader.hpp"
@@ -16,33 +15,33 @@
 #include "LoadTGA.h"
 #include "SceneManager.h"
 
+// Fade-in duration per page (seconds)
+const float SceneCutscene::FADE_DURATION = 2.f;
+
 // ─────────────────────────────────────────────────────────────────────────────
-SceneMenu::SceneMenu()
-    : selectedOption(0)
-    , blinkTimer(0.f)
-    , showBlink(true)
+SceneCutscene::SceneCutscene()
+    : currentPage(0)
+    , fadeTimer(0.f)
+    , enterWasDown(false)
 {
 }
 
-SceneMenu::~SceneMenu()
+SceneCutscene::~SceneCutscene()
 {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::Init()
+void SceneCutscene::Init()
 {
-    // Black background – suits a title screen
-    glClearColor(0.10f, 0.02f, 0.18f, 1.0f);  // dark purple background
-
+    glClearColor(0.f, 0.f, 0.f, 1.f);  // black void between pages
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
-    // VAO
     glGenVertexArrays(1, &m_vertexArrayID);
     glBindVertexArray(m_vertexArrayID);
 
-    // ── Shaders (same pair used in SceneShooting) ─────────────────────────
+    // ── Shaders ───────────────────────────────────────────────────────────
     m_programID = LoadShaders("Shader//Texture.vertexshader",
         "Shader//Text.fragmentshader");
     glUseProgram(m_programID);
@@ -77,16 +76,13 @@ void SceneMenu::Init()
     for (int i = 0; i < NUM_GEOMETRY; ++i)
         meshList[i] = nullptr;
 
-    // Font atlas – same calibri.tga used by SceneShooting
     meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
     meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
 
-    // Full-screen background quad (rendered in ortho space)
-    meshList[GEO_QUAD] = MeshBuilder::GenerateQuad("MenuBG", glm::vec3(1, 1, 1), 1.f);
+    meshList[GEO_QUAD] = MeshBuilder::GenerateQuad("CutsceneBG", glm::vec3(1, 1, 1), 1.f);
 
-    // ── Light (minimal – menu doesn't really need it, but keeps shader happy) ──
+    // ── Minimal light to satisfy shader ───────────────────────────────────
     glUniform1i(m_parameters[U_NUMLIGHTS], 1);
-
     light[0].type = Light::LIGHT_DIRECTIONAL;
     light[0].position = glm::vec3(0.f, 10.f, 0.f);
     light[0].color = glm::vec3(1.f, 1.f, 1.f);
@@ -111,172 +107,176 @@ void SceneMenu::Init()
         cosf(glm::radians<float>(light[0].cosInner)));
     glUniform1f(m_parameters[U_LIGHT0_EXPONENT], light[0].exponent);
 
-    // ── Projection (ortho-only menu – 16:9 matches SceneShooting) ────────
     glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
     projectionStack.LoadMatrix(projection);
 
-    // ── State ─────────────────────────────────────────────────────────────
-    selectedOption = 0;
-    blinkTimer = 0.f;
-    showBlink = true;
+   
+    
+    
+    
+    
+    // ── Story pages ───────────────────────────────────────────────────────
+    pages.clear();
 
-    // Show and unlock the cursor so the player can see it on the menu
+    Page p1;
+    p1.title = "THE CARNIVAL IS DOOMED.";
+    p1.body = "Someone planted bombs in the booths.";
+    p1.prompt = "Press SPACE to continue...";
+    pages.push_back(p1);
+
+    Page p2;
+    p2.title = "THE ONLY WAY TO DEFUSE IT?";
+    p2.body = "Complete every game in the carnival.";
+    p2.prompt = "Press SPACE to continue...";
+    pages.push_back(p2);
+
+    Page p3;
+    p3.title = "YOUR CHALLENGES AWAIT.";
+    p3.body = "FULFILL YOUR INSPECTOR DUTY.";
+    p3.prompt = "Press SPACE to continue...";
+    pages.push_back(p3);
+
+    Page p4;
+    p4.title = "FINISH YOUR SHIFT.";
+    p4.body = "Save the carnival. Defuse the bomb.";
+    p4.prompt = "Press SPACE to begin...";
+    pages.push_back(p4);
+
+    // ── Reset state ───────────────────────────────────────────────────────
+    currentPage = 0;
+    fadeTimer = 0.f;
+    enterWasDown = true;  // ignore held SPACE carried over from SceneMenu
+
     glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::Update(double dt)
+void SceneCutscene::Update(double dt)
 {
+    // Tick fade-in timer — clamp at FADE_DURATION so alpha reaches 1
+    if (fadeTimer < FADE_DURATION)
+        fadeTimer += static_cast<float>(dt);
+
     HandleKeyPress();
-
-    // Blink "Press ENTER" every 0.5 s
-    blinkTimer += static_cast<float>(dt);
-    if (blinkTimer >= 0.5f)
-    {
-        blinkTimer = 0.f;
-        showBlink = !showBlink;
-    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::HandleKeyPress()
+void SceneCutscene::HandleKeyPress()
 {
-    // SPACE → start game, switch to cutscene
-    if (KeyboardController::GetInstance()->IsKeyPressed(VK_SPACE))
+    bool enterDown = KeyboardController::GetInstance()->IsKeyDown(VK_SPACE);
+
+    if (enterDown && !enterWasDown)
     {
-        SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_CUTSCENE);
+        currentPage++;
+
+        if (currentPage >= static_cast<int>(pages.size()))
+        {
+            // All pages done — head to the lobby
+            SceneManager::GetInstance()->SwitchScene(SceneManager::SCENE_LOBBY);
+        }
+        else
+        {
+            // Reset fade for the new page
+            fadeTimer = 0.f;
+        }
     }
+
+    enterWasDown = enterDown;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::Render()
+void SceneCutscene::Render()
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    // ── Camera / view (identity – nothing 3D to show on menu) ────────────
     viewStack.LoadIdentity();
-    viewStack.LookAt(
-        0, 0, 1,   // eye
-        0, 0, 0,   // centre
-        0, 1, 0    // up
-    );
+    viewStack.LookAt(0, 0, 1, 0, 0, 0, 0, 1, 0);
     modelStack.LoadIdentity();
 
-    // ── Pass light to shader (directional, camera-space) ─────────────────
-    glm::vec3 lightDir(light[0].position.x, light[0].position.y, light[0].position.z);
-    glm::vec3 lightDir_cs = glm::vec3(viewStack.Top() * glm::vec4(lightDir, 0));
-    glUniform3fv(m_parameters[U_LIGHT0_POSITION], 1, glm::value_ptr(lightDir_cs));
+    // Guard against out-of-range (should never happen, but just in case)
+    if (currentPage >= static_cast<int>(pages.size()))
+        return;
 
-    // ─────────────────────────────────────────────────────────────────────
-    // All UI is drawn in 2-D ortho space (800 x 600), same as SceneShooting
-    // ─────────────────────────────────────────────────────────────────────
+    const Page& page = pages[currentPage];
 
-    // ── Enable blending so quads layer correctly ─────────────────────────
+    // ── Fade-in alpha (0 → 1 over FADE_DURATION seconds) ─────────────────
+    float alpha = fadeTimer / FADE_DURATION;
+    if (alpha > 1.f) alpha = 1.f;
+
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    // Shared specular / shininess for all flat quads
     meshList[GEO_QUAD]->material.kSpecular = glm::vec3(0.f, 0.f, 0.f);
     meshList[GEO_QUAD]->material.kShininess = 1.f;
 
+    // ── Dark background quad (always fully opaque) ────────────────────────
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.05f, 0.f, 0.10f);
+    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.05f, 0.f, 0.10f);
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 300.f, 800.f, 600.f);
 
+    // ── Horizontal accent bar behind the title ────────────────────────────
+    //    Fades in with the rest of the page content
+    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.60f * alpha, 0.05f * alpha, 0.05f * alpha);
+    meshList[GEO_QUAD]->material.kDiffuse = meshList[GEO_QUAD]->material.kAmbient;
+    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 340.f, 700.f, 6.f);
 
-    // ── WHITE TITLE BACKGROUND RECTANGLE ─────────────────────────────────
-    //    Sits behind the title and subtitle  (Y: 455–560)
-    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(1.f, 1.f, 1.f);
-    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(1.f, 1.f, 1.f);
-    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 510.f, 680.f, 100.f);
+    // ── Page counter dots at the bottom ───────────────────────────────────
+    //    Filled dot for current page, dim dot for others
+    float dotSpacing = 24.f;
+    int   totalPages = static_cast<int>(pages.size());
+    float startX = 400.f - (totalPages - 1) * dotSpacing * 0.5f;
 
-    // ── CENTRE PANEL — deep warm red behind controls ──────────────────────
-    //    Covers Y: 150–445
-    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.45f, 0.05f, 0.05f);
-    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.45f, 0.05f, 0.05f);
-    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 297.f, 680.f, 295.f);
+    for (int i = 0; i < totalPages; ++i)
+    {
+        bool isCurrent = (i == currentPage);
+        float brightness = isCurrent ? 0.90f : 0.25f;
 
-    // ── BOTTOM BAR — bright carnival yellow ──────────────────────────────
-    //    Covers Y: 50–148
-    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.90f, 0.65f, 0.00f);
-    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.90f, 0.65f, 0.00f);
-    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 99.f, 680.f, 100.f);
-
-    // ── TOP DIVIDER — yellow stripe under the white box ───────────────────
-    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.95f, 0.75f, 0.00f);
-    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.95f, 0.75f, 0.00f);
-    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 456.f, 680.f, 6.f);
-
-    // ── BOTTOM DIVIDER — red stripe above the yellow bar ──────────────────
-    meshList[GEO_QUAD]->material.kAmbient = glm::vec3(0.72f, 0.08f, 0.08f);
-    meshList[GEO_QUAD]->material.kDiffuse = glm::vec3(0.72f, 0.08f, 0.08f);
-    RenderMeshOnScreen(meshList[GEO_QUAD], 400.f, 149.f, 680.f, 6.f);
+        meshList[GEO_QUAD]->material.kAmbient = glm::vec3(
+            brightness * (isCurrent ? 1.f : 0.8f),
+            brightness * (isCurrent ? 0.7f : 0.7f),
+            brightness * (isCurrent ? 0.f : 0.7f)
+        );
+        meshList[GEO_QUAD]->material.kDiffuse = meshList[GEO_QUAD]->material.kAmbient;
+        RenderMeshOnScreen(meshList[GEO_QUAD],
+            startX + i * dotSpacing, 40.f, 12.f, 12.f);
+    }
 
     glDisable(GL_BLEND);
 
-    // ── Title — red text on white rectangle ───────────────────────────────
+    // ── Title (fades in) ──────────────────────────────────────────────────
+    glm::vec3 titleColor(1.f * alpha, 0.85f * alpha, 0.f);
     RenderTextOnScreen(meshList[GEO_TEXT],
-        "THE LAST SHIFT:",
-        glm::vec3(0.72f, 0.05f, 0.05f),
-        38.f,
-        130.f, 510.f);
+        page.title, titleColor,
+        26.f,
+        400.f - (page.title.length() * 26.f * 0.5f),   // rough centre
+        370.f);
 
-    // ── Sub-title — dark red below title, still on white box ─────────────
+    // ── Body (fades in, slightly delayed — starts at 30% of fade) ─────────
+    float bodyAlpha = (alpha - 0.3f) / 0.7f;
+    if (bodyAlpha < 0.f) bodyAlpha = 0.f;
+    if (bodyAlpha > 1.f) bodyAlpha = 1.f;
+
+    glm::vec3 bodyColor(1.f * bodyAlpha, 0.75f * bodyAlpha, 0.50f * bodyAlpha);
     RenderTextOnScreen(meshList[GEO_TEXT],
-        "Finish or BLOW UP!",
-        glm::vec3(0.50f, 0.04f, 0.04f),
-        22.f,
-        200.f, 468.f);
+        page.body, bodyColor,
+        20.f,
+        400.f - (page.body.length() * 20.f * 0.5f),
+        305.f);
 
-    // ── Controls header — yellow on red panel ─────────────────────────────
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "CONTROLS",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        318.f, 415.f);
-
-    // ── Controls list — light yellow on red panel ─────────────────────────
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "WASD  - Move",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        270.f, 380.f);
-
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "MOUSE - Look",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        270.f, 350.f);
-
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "F     - Interact",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        270.f, 320.f);
-
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "LMB   - Shoot",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        270.f, 290.f);
-
-
-    RenderTextOnScreen(meshList[GEO_TEXT],
-        "ESC   - Quit",
-        glm::vec3(0.f, 0.f, 0.f),
-        22.f,
-        270.f, 230.f);
-
-    // ── "Press SPACE" prompt 
-    if (showBlink)
+    // ── Prompt — only shown once fully faded in ────────────────────────────
+    if (alpha >= 1.f)
     {
         RenderTextOnScreen(meshList[GEO_TEXT],
-            "PRESS [SPACE] TO START",
-            glm::vec3(0.55f, 0.03f, 0.03f),
-            26.f,
-            120.f, 82.f);
+            page.prompt,
+            glm::vec3(0.55f, 0.55f, 0.55f),
+            16.f,
+            400.f - (page.prompt.length() * 16.f * 0.5f),
+            80.f);
     }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::Exit()
+void SceneCutscene::Exit()
 {
     for (int i = 0; i < NUM_GEOMETRY; ++i)
     {
@@ -291,9 +291,7 @@ void SceneMenu::Exit()
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RenderMesh – identical to SceneShooting's implementation
-// ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::RenderMesh(Mesh* mesh, bool enableLight)
+void SceneCutscene::RenderMesh(Mesh* mesh, bool enableLight)
 {
     glm::mat4 MVP = projectionStack.Top() * viewStack.Top() * modelStack.Top();
     glUniformMatrix4fv(m_parameters[U_MVP], 1, GL_FALSE, glm::value_ptr(MVP));
@@ -304,10 +302,9 @@ void SceneMenu::RenderMesh(Mesh* mesh, bool enableLight)
     if (enableLight)
     {
         glUniform1i(m_parameters[U_LIGHTENABLED], 1);
-        glm::mat4 modelView_it = glm::inverseTranspose(modelView);
+        glm::mat4 mit = glm::inverseTranspose(modelView);
         glUniformMatrix4fv(m_parameters[U_MODELVIEW_INVERSE_TRANSPOSE], 1, GL_FALSE,
-            glm::value_ptr(modelView_it));
-
+            glm::value_ptr(mit));
         glUniform3fv(m_parameters[U_MATERIAL_AMBIENT], 1, &mesh->material.kAmbient.r);
         glUniform3fv(m_parameters[U_MATERIAL_DIFFUSE], 1, &mesh->material.kDiffuse.r);
         glUniform3fv(m_parameters[U_MATERIAL_SPECULAR], 1, &mesh->material.kSpecular.r);
@@ -337,10 +334,7 @@ void SceneMenu::RenderMesh(Mesh* mesh, bool enableLight)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RenderMeshOnScreen — identical to SceneShooting's implementation
-// Ortho space: 800 x 600. x/y = centre of quad, sizex/sizey = dimensions.
-// ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::RenderMeshOnScreen(Mesh* mesh, float x, float y,
+void SceneCutscene::RenderMeshOnScreen(Mesh* mesh, float x, float y,
     float sizex, float sizey)
 {
     glDisable(GL_DEPTH_TEST);
@@ -352,23 +346,19 @@ void SceneMenu::RenderMeshOnScreen(Mesh* mesh, float x, float y,
     viewStack.LoadIdentity();
     modelStack.PushMatrix();
     modelStack.LoadIdentity();
-
     modelStack.Translate(x, y, 0.f);
     modelStack.Scale(sizex, sizey, 1.f);
 
-    RenderMesh(mesh, false);   // UI — no lighting
+    RenderMesh(mesh, false);
 
     projectionStack.PopMatrix();
     viewStack.PopMatrix();
     modelStack.PopMatrix();
-
     glEnable(GL_DEPTH_TEST);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RenderTextOnScreen – identical to SceneShooting's implementation
-// ─────────────────────────────────────────────────────────────────────────────
-void SceneMenu::RenderTextOnScreen(Mesh* mesh, std::string text,
+void SceneCutscene::RenderTextOnScreen(Mesh* mesh, std::string text,
     glm::vec3 color, float size,
     float x, float y)
 {
@@ -379,7 +369,6 @@ void SceneMenu::RenderTextOnScreen(Mesh* mesh, std::string text,
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_DEPTH_TEST);
 
-    // Same ortho dimensions as SceneShooting (800 x 600)
     glm::mat4 ortho = glm::ortho(0.f, 800.f, 0.f, 600.f, -100.f, 100.f);
 
     projectionStack.PushMatrix();
@@ -388,7 +377,7 @@ void SceneMenu::RenderTextOnScreen(Mesh* mesh, std::string text,
     viewStack.LoadIdentity();
     modelStack.PushMatrix();
     modelStack.LoadIdentity();
-    modelStack.Translate(x, y, 0);
+    modelStack.Translate(x, y, 0.f);
     modelStack.Scale(size, size, size);
 
     glUniform1i(m_parameters[U_TEXT_ENABLED], 1);
@@ -403,7 +392,7 @@ void SceneMenu::RenderTextOnScreen(Mesh* mesh, std::string text,
     {
         glm::mat4 charSpacing = glm::translate(
             glm::mat4(1.f),
-            glm::vec3(0.5f + i * 1.0f, 0.5f, 0));
+            glm::vec3(0.5f + i * 1.0f, 0.5f, 0.f));
         glm::mat4 MVP = projectionStack.Top() *
             viewStack.Top() *
             modelStack.Top() *

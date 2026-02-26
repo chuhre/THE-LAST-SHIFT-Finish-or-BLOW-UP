@@ -157,7 +157,7 @@
     <ClCompile Include="Source\MatrixStack.cpp" />
     <ClCompile Include="Source\Mesh.cpp" />
     <ClCompile Include="Source\MeshBuilder.cpp" />
-    <ClCompile Include="Source\PauseMenu.cpp" />
+    <ClCompile Include="Source\SceneCutscene.cpp" />
     <ClCompile Include="Source\PhysicsObject.cpp" />
     <ClCompile Include="Source\SceneCans.cpp" />
     <ClCompile Include="Source\SceneDucks.cpp" />
@@ -182,7 +182,7 @@
     <ClInclude Include="Source\Mesh.h" />
     <ClInclude Include="Source\MeshBuilder.h" />
     <ClInclude Include="Source\ObjectPool.h" />
-    <ClInclude Include="Source\PauseMenu.h" />
+    <ClInclude Include="Source\SceneCutscene.h" />
     <ClInclude Include="Source\PhysicsObject.h" />
     <ClInclude Include="Source\Scene.h" />
     <ClInclude Include="Source\SceneCans.h" />

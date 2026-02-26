@@ -18,6 +18,7 @@ public:
         SCENE_SHOOTING,
         SCENE_CANS,
         SCENE_TANK,
+        SCENE_CUTSCENE,
         SCENE_END,
         SCENE_TOTAL
     };

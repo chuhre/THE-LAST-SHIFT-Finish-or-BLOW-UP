@@ -4,6 +4,8 @@
 #include "SceneShooting.h"
 #include "SceneCans.h"
 #include "SceneTank.h"
+#include "SceneCutscene.h"
+#include "SceneMenu.h"
 
 SceneManager* SceneManager::m_instance = nullptr;
 
@@ -49,8 +51,10 @@ void SceneManager::Init(void)
     scenes[SCENE_SHOOTING] = new SceneShooting();
     scenes[SCENE_CANS] = new SceneCans();
     scenes[SCENE_TANK] = new SceneTank();
+    scenes[SCENE_CUTSCENE] = new SceneCutscene();
+    scenes[SCENE_MENU] = new SceneMenu();
 
-    currentSceneType = SCENE_LOBBY;
+    currentSceneType = SCENE_MENU;
     currentScene = scenes[currentSceneType];
     currentScene->Init();
 }
