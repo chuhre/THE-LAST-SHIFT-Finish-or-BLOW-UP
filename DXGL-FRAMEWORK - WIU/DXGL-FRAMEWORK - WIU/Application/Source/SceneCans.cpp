@@ -69,18 +69,6 @@ void SceneCans::Init()
 	m_parameters[U_LIGHT0_COSINNER] = glGetUniformLocation(m_programID, "lights[0].cosInner");
 	m_parameters[U_LIGHT0_EXPONENT] = glGetUniformLocation(m_programID, "lights[0].exponent");
 
-	m_parameters[U_LIGHT1_TYPE] = glGetUniformLocation(m_programID, "lights[1].type");
-	m_parameters[U_LIGHT1_POSITION] = glGetUniformLocation(m_programID, "lights[1].position_cameraspace");
-	m_parameters[U_LIGHT1_COLOR] = glGetUniformLocation(m_programID, "lights[1].color");
-	m_parameters[U_LIGHT1_POWER] = glGetUniformLocation(m_programID, "lights[1].power");
-	m_parameters[U_LIGHT1_KC] = glGetUniformLocation(m_programID, "lights[1].kC");
-	m_parameters[U_LIGHT1_KL] = glGetUniformLocation(m_programID, "lights[1].kL");
-	m_parameters[U_LIGHT1_KQ] = glGetUniformLocation(m_programID, "lights[1].kQ");
-	m_parameters[U_LIGHT1_SPOTDIRECTION] = glGetUniformLocation(m_programID, "lights[1].spotDirection");
-	m_parameters[U_LIGHT1_COSCUTOFF] = glGetUniformLocation(m_programID, "lights[1].cosCutoff");
-	m_parameters[U_LIGHT1_COSINNER] = glGetUniformLocation(m_programID, "lights[1].cosInner");
-	m_parameters[U_LIGHT1_EXPONENT] = glGetUniformLocation(m_programID, "lights[1].exponent");
-
 	m_parameters[U_LIGHTENABLED] = glGetUniformLocation(m_programID, "lightEnabled");
 	m_parameters[U_NUMLIGHTS] = glGetUniformLocation(m_programID, "numLights");
 	m_parameters[U_COLOR_TEXTURE_ENABLED] = glGetUniformLocation(m_programID, "colorTextureEnabled");
@@ -396,18 +384,10 @@ void SceneCans::Update(double dt)
 				cos(glm::radians(m_aimPitch)), sin(glm::radians(m_aimPitch)), 0.f
 			));
 
-			// Switch to spotlight aimed at the can table
-			light[0].type = Light::LIGHT_SPOT;
-			light[0].position = glm::vec3(0.f, 8.f, -4.f);   // above and behind player
-			light[0].spotDirection = glm::normalize(glm::vec3(0.f, -1.f, -1.f)); // aimed at cans
-			light[0].cosCutoff = 25.f;   // tight cone
-			light[0].cosInner = 15.f;
-			light[0].power = 3.f;    // brighter for dramatic effect
-			glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
-			glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
-			glUniform1f(m_parameters[U_LIGHT0_COSCUTOFF], cosf(glm::radians(light[0].cosCutoff)));
-			glUniform1f(m_parameters[U_LIGHT0_COSINNER], cosf(glm::radians(light[0].cosInner)));
-
+			if (light[0].type == Light::LIGHT_POINT) {
+				light[0].type = Light::LIGHT_SPOT;
+			}
+			
 			m_isAiming = true;
 		}
 	}
@@ -1057,12 +1037,9 @@ void SceneCans::HandleMouseInput()
 			camera.target = m_savedCamTarget;
 			camera.up = m_savedCamUp;
 
-			// Restore point light
-			light[0].type = Light::LIGHT_POINT;
-			light[0].position = glm::vec3(0.f, 5.f, 0.f);
-			light[0].power = 1.f;
-			glUniform1i(m_parameters[U_LIGHT0_TYPE], light[0].type);
-			glUniform1f(m_parameters[U_LIGHT0_POWER], light[0].power);
+			if (light[0].type == Light::LIGHT_SPOT) {
+				light[0].type = Light::LIGHT_POINT;
+			}
 
 			m_isAiming = false;
 		}
