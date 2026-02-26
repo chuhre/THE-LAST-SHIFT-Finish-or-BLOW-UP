@@ -223,6 +223,11 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 	}
 
 
+	
+	// --- Collision boxes for walls, floor, and counter
+	BuildCollisionBoxes();
+
+
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
@@ -277,7 +282,9 @@ void SceneShooting::Update(double dt)
 
 
 	// Store position before camera update
-	//glm::vec3 oldPos = camera.position;
+	// Store position before camera update
+	glm::vec3 oldPos = camera.position;
+	glm::vec3 oldTarget = camera.target;
 
 	//// Update camera position based on input
 	//camera.Update(dt);
@@ -295,6 +302,39 @@ void SceneShooting::Update(double dt)
 	else
 	{
 		camera.Update(dt);
+
+		// --- Collision Resolution ---
+		glm::vec3 updatedPos = camera.position;
+
+		// Resolve Vertical Collision: floor/ceiling
+		camera.position = glm::vec3(oldPos.x, updatedPos.y, oldPos.z);
+		for (const AABB& box : collisionBoxes)
+		{
+			if (CheckAABBCollision(camera.position, 0.3f, box))
+			{
+				// If hit something vertically, go back to old Y
+				camera.position.y = oldPos.y;
+				camera.target.y = oldTarget.y;
+				break;
+			}
+		}
+
+		// Resolve Horizontal Collision
+		float currentY = camera.position.y;
+		camera.position = glm::vec3(updatedPos.x, currentY, updatedPos.z);
+
+		for (const AABB& box : collisionBoxes)
+		{
+			if (CheckAABBCollision(camera.position, 0.3f, box))
+			{
+				// If hit a wall, revert X and Z
+				camera.position.x = oldPos.x;
+				camera.position.z = oldPos.z;
+				camera.target.x = oldTarget.x;
+				camera.target.z = oldTarget.z;
+				break;
+			}
+		}
 	}
 
 	float fdt = static_cast<float>(dt);
@@ -332,6 +372,8 @@ void SceneShooting::Update(double dt)
 		door[0].Close();
 		showInteractPrompt = true;
 	}
+
+	
 
 	
 	// --- STATE_FIND_GUN: just let player walk around ---
@@ -947,6 +989,26 @@ void SceneShooting::Render()
 			"[R] Try Again", glm::vec3(1, 1, 0), 35.f, 300.f, 250.f);
 	}
 
+
+
+	// ---- DEBUG: Draw collision box outlines ----
+	for (const AABB& box : collisionBoxes)
+	{
+		modelStack.PushMatrix();
+
+		glm::vec3 center = (box.min + box.max) * 0.5f;
+		glm::vec3 size = box.max - box.min;
+
+		modelStack.Translate(center.x, center.y, center.z);
+		modelStack.Scale(size.x, size.y, size.z);
+
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		RenderMesh(meshList[GEO_CUBE], false);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+
+		modelStack.PopMatrix();
+	}
+
 }
 
 void SceneShooting::RenderMesh(Mesh* mesh, bool enableLight)
@@ -1223,6 +1285,79 @@ void SceneShooting::ResetGame()
 		glm::vec3(0.f, 2.f, 0.f),
 		glm::vec3(0.f, 1.f, 0.f)
 	);
+}
+
+
+// ---------------------------------------------------------------
+// CheckAABBCollision
+// Sphere-vs-AABB collision: clamps pos to nearest box point,
+// returns true if that distance is less than radius.
+// ---------------------------------------------------------------
+bool SceneShooting::CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box)
+{
+	glm::vec3 closestPoint;
+	closestPoint.x = glm::clamp(pos.x, box.min.x, box.max.x);
+	closestPoint.y = glm::clamp(pos.y, box.min.y, box.max.y);
+	closestPoint.z = glm::clamp(pos.z, box.min.z, box.max.z);
+	float distance = glm::distance(closestPoint, pos);
+	return distance < radius;
+}
+
+// ---------------------------------------------------------------
+// BuildCollisionBoxes
+// Populates collisionBoxes with AABB volumes matching the booth
+// geometry (floor, walls, counter). Tweak min/max to fit your scene.
+// ---------------------------------------------------------------
+void SceneShooting::BuildCollisionBoxes()
+{
+	collisionBoxes.clear();
+
+	// Floor
+	AABB floor;
+	floor.min = glm::vec3(-35.f, 0.f, -7.5f);
+	floor.max = glm::vec3(10.f, 1.5f, 14.5f);
+	collisionBoxes.push_back(floor);
+
+	// Back-of-scene wall (behind targets)
+	AABB backSceneWall;
+	backSceneWall.min = glm::vec3(-10.f, -0.75f, -7.6f);
+	backSceneWall.max = glm::vec3(10.f, 8.f, -7.4f);
+	collisionBoxes.push_back(backSceneWall);
+
+	// Right wall
+	AABB rightWall;
+	rightWall.min = glm::vec3(9.5f, -0.75f, -7.5f);
+	rightWall.max = glm::vec3(10.f, 8.f, 14.5f);
+	collisionBoxes.push_back(rightWall);
+
+	// Left wall 
+	AABB leftWallFront;
+	leftWallFront.min = glm::vec3(-10.f, -0.75f, -7.5f);
+	leftWallFront.max = glm::vec3(-9.5f, 8.f, 14.5f);
+	collisionBoxes.push_back(leftWallFront);
+
+	// Front Wall
+	// Front wall L  (render: center (5.5, 4, 7.5), scale (9, 8, 0.3))
+	// X: 1.0 to 10.0,  Y: 0 to 8,  Z: 7.35 to 7.65
+	AABB frontWallL;
+	frontWallL.min = glm::vec3(1.0f, 0.f, 7.35f);
+	frontWallL.max = glm::vec3(10.0f, 8.f, 7.65f);
+	collisionBoxes.push_back(frontWallL);
+
+	// Front wall R  (render: center (-5.5, 4, 7.5), scale (9, 8, 0.3))
+	// X: -10.0 to -1.0,  Y: 0 to 8,  Z: 7.35 to 7.65
+	AABB frontWallR;
+	frontWallR.min = glm::vec3(-10.0f, 0.f, 7.35f);
+	frontWallR.max = glm::vec3(-1.0f, 8.f, 7.65f);
+	collisionBoxes.push_back(frontWallR);
+
+	// Counter
+	AABB counter;
+	counter.min = glm::vec3(-10.f, -2.f, 1.0f);
+	counter.max = glm::vec3(10.f, 2.f, 2.5f);
+	collisionBoxes.push_back(counter);
+
+	
 }
 
 

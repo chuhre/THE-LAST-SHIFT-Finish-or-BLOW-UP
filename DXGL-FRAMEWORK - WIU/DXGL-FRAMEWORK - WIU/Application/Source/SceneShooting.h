@@ -46,7 +46,7 @@ public:
 		GEO_GUN,            // the MISSING item the player must find
 
 		// HUD
-		GEO_GUI,            // crosshair quad
+		GEO_GUI,            
 		GEO_TEXT,
 
 		NUM_GEOMETRY,
@@ -121,16 +121,16 @@ public:
 	static const int POOL_SIZE = 8;   // bullet pool size = MAX_BULLETS
 
 	// Patrol zones for targets (only used for looping movement, not falling)
-	struct Zone { float minX, maxX, startX; };
-	Zone zones[NUM_TARGETS] = {
-		{ -8.0f, -4.8f, -8.0f },   // target 0 patrols leftmost zone
-		{ -4.8f, -1.6f, -4.8f },   // target 1
-		{ -1.6f,  1.6f, -1.6f },   // target 2 (centre)
-		{  1.6f,  4.8f,  1.6f },   // target 3
-		{  4.8f,  8.0f,  4.8f },   // target 4 patrols rightmost zone
-	};
+	//struct Zone { float minX, maxX, startX; };
+	//Zone zones[NUM_TARGETS] = {
+	//	{ -8.0f, -4.8f, -8.0f },   // target 0 patrols leftmost zone
+	//	{ -4.8f, -1.6f, -4.8f },   // target 1
+	//	{ -1.6f,  1.6f, -1.6f },   // target 2 (centre)
+	//	{  1.6f,  4.8f,  1.6f },   // target 3
+	//	{  4.8f,  8.0f,  4.8f },   // target 4 patrols rightmost zone
+	//};
 
-	float speeds[NUM_TARGETS] = { 2.5f, 3.5f, 2.0f, 4.0f, 3.0f };
+	//float speeds[NUM_TARGETS] = { 2.5f, 3.5f, 2.0f, 4.0f, 3.0f };
 
 
 	// =====================================================
@@ -149,7 +149,7 @@ private:
 	void HandleKeyPress();
 	void HandleMouseInput();
 
-	// ----- rendering helpers (same signatures as SceneWIU) 
+	// ----- rendering helpers 
 	void RenderMesh(Mesh* mesh, bool enableLight);
 	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
 	void RenderText(Mesh* mesh, std::string text, glm::vec3 color);
@@ -163,6 +163,16 @@ private:
 
 	// Collision detection
 	glm::vec3 playerSize;
+
+	struct AABB
+	{
+		glm::vec3 min;
+		glm::vec3 max;
+	};
+
+	std::vector<AABB> collisionBoxes;
+	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
+	void BuildCollisionBoxes();
 
 	// door
 	static const int NUM_DOORS = 2;
