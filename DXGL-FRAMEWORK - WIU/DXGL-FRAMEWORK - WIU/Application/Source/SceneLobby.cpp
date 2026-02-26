@@ -410,6 +410,7 @@ void SceneLobby::Render()
 		modelStack.PushMatrix();
 		modelStack.Translate(doors[i].position.x, doors[i].position.y, doors[i].position.z);
 		modelStack.Rotate(doors[i].rotation, 0, 1, 0);   // use Door's own rotation
+		modelStack.Translate(doors[i].width * 0.5f, 0.f, 0.f);
 		modelStack.Scale(doors[i].width, doors[i].height, 0.2f);
 
 		if(i == 0)
