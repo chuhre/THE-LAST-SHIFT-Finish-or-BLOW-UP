@@ -47,6 +47,7 @@ public:
 		GEO_BALL,
 		GEO_TABLE,
 		GEO_CAN,
+		GEO_BOMB,
 
 		GEO_GUI,
 
@@ -75,6 +76,19 @@ public:
 		U_LIGHT0_COSCUTOFF,
 		U_LIGHT0_COSINNER,
 		U_LIGHT0_EXPONENT,
+
+		U_LIGHT1_TYPE,
+		U_LIGHT1_POSITION,
+		U_LIGHT1_COLOR,
+		U_LIGHT1_POWER,
+		U_LIGHT1_KC,
+		U_LIGHT1_KL,
+		U_LIGHT1_KQ,
+		U_LIGHT1_SPOTDIRECTION,
+		U_LIGHT1_COSCUTOFF,
+		U_LIGHT1_COSINNER,
+		U_LIGHT1_EXPONENT,
+
 		U_NUMLIGHTS,
 		U_COLOR_TEXTURE_ENABLED,
 		U_COLOR_TEXTURE,
@@ -159,7 +173,7 @@ private:
 
 	MatrixStack modelStack, viewStack, projectionStack;
 
-	static const int NUM_LIGHTS = 1;
+	static const int NUM_LIGHTS = 2;
 	Light light[NUM_LIGHTS];
 	bool enableLight;
 
@@ -168,6 +182,7 @@ private:
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
 	bool showDoorInteractPrompt;
+	int doorCollisionIdx[2];
 
 	// Game state
 	GameState gameState;
@@ -191,6 +206,7 @@ private:
 
 	//booth
 	bool showBoothPrompt = false;
+	float bombTimer;
 
 	//crosshair
 	Vector3 crosshairPos = Vector3(405, 290, 0);
