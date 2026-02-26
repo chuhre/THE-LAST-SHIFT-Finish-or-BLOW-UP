@@ -79,6 +79,7 @@ private:
 
 	// ── Helpers (same signatures as SceneShooting) ────────────────────────
 	void RenderMesh(Mesh* mesh, bool enableLight);
+	void RenderMeshOnScreen(Mesh* mesh, float x, float y, float sizex, float sizey);
 	void RenderTextOnScreen(Mesh* mesh, std::string text,
 		glm::vec3 color, float size, float x, float y);
 	void HandleKeyPress();
