@@ -203,7 +203,7 @@ bool OverlapCircle2AABB(Vector3 circlePos, float radius, Vector3 boxMin, Vector3
 	Vector3 closestPoint;
 	closestPoint.x = fmax(boxMin.x, fmin(circlePos.x, boxMax.x));
 	closestPoint.y = fmax(boxMin.y, fmin(circlePos.y, boxMax.y));
-	closestPoint.z = 0.0f;
+	closestPoint.z = fmax(boxMin.z, fmin(circlePos.z, boxMax.z));
 	// fmax is used to get the larger of two values
 	// fmin is used to get the smaller of two values
 

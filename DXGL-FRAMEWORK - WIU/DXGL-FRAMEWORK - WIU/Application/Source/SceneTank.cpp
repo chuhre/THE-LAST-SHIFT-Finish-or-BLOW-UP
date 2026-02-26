@@ -95,8 +95,11 @@ void SceneTank::Init()
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 	meshList[GEO_PLANK] = MeshBuilder::GenerateRectangularPrism("Plank", glm::vec3(1.f, 1.f, 1.f), 10.f, 5.f, 0.5f);
 	meshList[GEO_BALL] = MeshBuilder::GenerateSphere("Ball", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
+	meshList[GEO_BALL2] = MeshBuilder::GenerateSphere("Ball2", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
+	meshList[GEO_BALL3] = MeshBuilder::GenerateSphere("Ball3", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
 	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 15.f, 1.0f, 1.0f);
 	meshList[GEO_PILLAR] = MeshBuilder::GenerateRectangularPrism("Pillar", glm::vec3(0.55f, 0.35f, 0.15f), 1.f, 5.f, 1.f);
+	meshList[GEO_DOOR] = MeshBuilder::GenerateRectangularPrism("Door", glm::vec3(0.4f, 0.25f, 0.15f), 1.f, 1.f, 1.f); // dark wood color
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	// OBJ Models
@@ -116,18 +119,17 @@ void SceneTank::Init()
 	meshList[GEO_CABINET] = MeshBuilder::GenerateOBJ("Cabinet", "Models//iron_cabinet.obj");
 	meshList[GEO_CABINET]->textureID = LoadTGA("Images//iron_cabinet_MT_BaseColor.1002.tga");
 
+	// text
+	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
+	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
+
 	// Environment
-	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism(
-		"Floor", glm::vec3(0.45f, 0.32f, 0.18f),   // dark wood brown
-		20.f, 0.2f, 15.f);
+	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 20.f);  // dark wood brown
 
-	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism(
-		"Ceiling", glm::vec3(0.85f, 0.75f, 0.55f),  // light tan canvas
-		20.f, 0.2f, 15.f);
+	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f); // light tan canvas
 
-	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism(
-		"Wall", glm::vec3(0.9f, 0.85f, 0.6f),        // carnival cream
-		1.f, 1.f, 1.f);   // scaled per-wall in Render()
+	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);   // carnival cream
+																													   // scaled per-wall in Render()
 
 
 	// Skybox NIGHT
@@ -159,6 +161,34 @@ void SceneTank::Init()
 	// Player collision box size (width, height, depth)
 	playerSize = glm::vec3(0.4f, 1.8f, 0.4f);
 
+	//initialise door 
+	door = { glm::vec3(1.f, 2.f, 10.f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
+
+	// ball physics properties
+	ballPhys.pos = Vector3(ballRestPos.x, ballRestPos.y, ballRestPos.z);
+	ballPhys.mass = 0.5f;
+	ballPhys.bounciness = 0.3f;
+
+	// collision objects (position, mass)
+	// Walls
+	wallBack.pos = Vector3(0.f, 4.f, -7.5f);  wallBack.mass = 0.f;
+	wallLeft.pos = Vector3(-10.f, 4.f, 0.f);  wallLeft.mass = 0.f;
+	wallRight.pos = Vector3(10.f, 4.f, 0.f);   wallRight.mass = 0.f;
+	wallCeiling.pos = Vector3(0.f, 8.f, 0.f);    wallCeiling.mass = 0.f;
+
+	// Objects
+	objCounter.pos = Vector3(0.f, 0.5f, 3.f);    objCounter.mass = 0.f;
+	objPillar.pos = Vector3(2.5f, 1.f, 0.f);    objPillar.mass = 0.f;
+	objTank.pos = Vector3(-5.5f, 2.f, 0.f);   objTank.mass = 0.f;
+	objCabinet.pos = Vector3(8.9f, 0.f, -5.f);   objCabinet.mass = 0.f;
+	objBox1.pos = Vector3(-8.9f, 0.5f, -3.f); objBox1.mass = 0.f;
+	objBox2.pos = Vector3(-8.9f, 1.56f, -3.f); objBox2.mass = 0.f;
+	objBox3.pos = Vector3(-7.9f, 0.5f, -2.f); objBox3.mass = 0.f;
+	objBox4.pos = Vector3(-7.9f, 0.5f, -4.f); objBox4.mass = 0.f;
+
+	// target phys — position matches render Translate exactly
+	objTarget.pos = Vector3(3.5f, 3.f, 0.f);
+	objTarget.mass = 0.f;
 
 	// ANIMATIONS
 
@@ -191,11 +221,78 @@ void SceneTank::Init()
 
 	enableLight = true;
 
-
+	BuildCollisionBoxes();
 }
 
 
+bool SceneTank::CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box)
+{
+	glm::vec3 closestPoint;
+	closestPoint.x = glm::clamp(pos.x, box.min.x, box.max.x);
+	closestPoint.y = glm::clamp(pos.y, box.min.y, box.max.y);
+	closestPoint.z = glm::clamp(pos.z, box.min.z, box.max.z);
+	float distance = glm::distance(closestPoint, pos);
+	return distance < radius;
+}
 
+void SceneTank::BuildCollisionBoxes()
+{
+	collisionBoxes.clear();
+
+	// Back wall
+	AABB backWall;
+	backWall.min = glm::vec3(-10.f, 0.f, -7.65f);
+	backWall.max = glm::vec3(10.f, 8.f, -7.35f);
+	collisionBoxes.push_back(backWall);
+
+	// Left wall
+	AABB leftWall;
+	leftWall.min = glm::vec3(-10.15f, 0.f, -7.5f);
+	leftWall.max = glm::vec3(-9.85f, 8.f, 7.5f);
+	collisionBoxes.push_back(leftWall);
+
+	// Right wall
+	AABB rightWall;
+	rightWall.min = glm::vec3(9.85f, 0.f, -7.5f);
+	rightWall.max = glm::vec3(10.15f, 8.f, 7.5f);
+	collisionBoxes.push_back(rightWall);
+
+	// Ceiling
+	AABB ceiling;
+	ceiling.min = glm::vec3(-10.f, 7.9f, -7.5f);
+	ceiling.max = glm::vec3(10.f, 8.1f, 7.5f);
+	collisionBoxes.push_back(ceiling);
+
+	// Counter
+	AABB counter;
+	counter.min = glm::vec3(-7.5f, 0.f, 4.5f);
+	counter.max = glm::vec3(7.5f, 1.f, 5.5f);
+	collisionBoxes.push_back(counter);
+
+	// Pillar
+	AABB pillar;
+	pillar.min = glm::vec3(2.f, 1.f, -0.5f);
+	pillar.max = glm::vec3(3.f, 6.f, 0.5f);
+	collisionBoxes.push_back(pillar);
+
+	// Tank
+	AABB tank;
+	tank.min = glm::vec3(-1.65f, 0.f, -1.75f);
+	tank.max = glm::vec3(1.85f, 4.f, 1.75f);
+	collisionBoxes.push_back(tank);
+
+	// Cabinet
+	AABB cabinet;
+	cabinet.min = glm::vec3(8.0f, 0.f, -7.f);
+	cabinet.max = glm::vec3(9.5f, 4.5f, -3.f);
+	collisionBoxes.push_back(cabinet);
+
+	// Boxes
+	AABB box1; box1.min = glm::vec3(-9.35f, 0.05f, -3.45f); box1.max = glm::vec3(-8.45f, 0.95f, -2.55f); collisionBoxes.push_back(box1);
+	AABB box2; box2.min = glm::vec3(-9.35f, 1.11f, -3.45f); box2.max = glm::vec3(-8.45f, 2.01f, -2.55f); collisionBoxes.push_back(box2);
+	AABB box3; box3.min = glm::vec3(-8.35f, 0.05f, -2.45f); box3.max = glm::vec3(-7.45f, 0.95f, -1.55f); collisionBoxes.push_back(box3);
+	AABB box4; box4.min = glm::vec3(-8.35f, 0.05f, -4.45f); box4.max = glm::vec3(-7.45f, 0.95f, -3.55f); collisionBoxes.push_back(box4);
+}
 
 
 void SceneTank::Update(double dt)
@@ -219,24 +316,314 @@ void SceneTank::Update(double dt)
 
 	// Store position before camera update
 	glm::vec3 oldPos = camera.position;
+	glm::vec3 oldTarget = camera.target;
 
 	// Update camera position based on input
 	camera.Update(dt);
 
+	// ADD THIS BLOCK:
+	glm::vec3 updatedPos = camera.position;
 
+	// Vertical
+	camera.position = glm::vec3(oldPos.x, updatedPos.y, oldPos.z);
+	for (const AABB& box : collisionBoxes)
+	{
+		if (CheckAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.y = oldPos.y;
+			camera.target.y = oldTarget.y;
+			break;
+		}
+	}
 
+	// Horizontal
+	float currentY = camera.position.y;
+	camera.position = glm::vec3(updatedPos.x, currentY, updatedPos.z);
+	for (const AABB& box : collisionBoxes)
+	{
+		if (CheckAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.x = oldPos.x;
+			camera.position.z = oldPos.z;
+			camera.target.x = oldTarget.x;
+			camera.target.z = oldTarget.z;
+			break;
+		}
+	}
 
+	showInteractPrompt = false;
+	showLockedPrompt = false;  // add this
 
+	glm::vec3 camForward = glm::normalize(camera.target - camera.position);
 
+	// --- HOLDING ---
+	if (ballState == HELD)
+	{
+		// Ball floats in front of camera
+		glm::vec3 holdPos = camera.position + camForward * 1.2f + glm::vec3(0, -0.3f, 0);
+		ballPhys.pos = Vector3(holdPos.x, holdPos.y, holdPos.z);
+		ballPhys.vel = Vector3(0, 0, 0);
+		ballPhys.accel = Vector3(0, 0, 0);
 
+		// Charge power while holding left click
+		if (MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+		{
+			throwPower += static_cast<float>(dt) * 12.f;
+			throwPower = glm::clamp(throwPower, 0.f, 20.f);
+			isCharging = true;
+		}
+		else if (isCharging) // released
+		{
+			glm::vec3 throwDir = glm::normalize(camForward + glm::vec3(0, 0.1f, 0));
+			ballPhys.vel = Vector3(throwDir.x * throwPower,
+				throwDir.y * throwPower,
+				throwDir.z * throwPower);
+			ballPhys.accel = Vector3(0, -9.8f, 0); // gravity
+			ballState = THROWN;
+			isCharging = false;
+			throwPower = 0.f;
+		}
 
+		// Drop with E
+		if (KeyboardController::GetInstance()->IsKeyPressed('E'))
+		{
+			ballPhys.pos = Vector3(ballRestPos.x, ballRestPos.y, ballRestPos.z);
+			ballPhys.accel = Vector3(0, -9.8f, 0);
+			ballState = THROWN;
+		}
+	}
 
+	// --- IN FLIGHT ---
+	if (ballState == THROWN)
+	{
+		ballPhys.UpdatePhysics(static_cast<float>(dt));
 
+		float r = 0.15f;
 
+		// Floor
+		if (ballPhys.pos.y < 0.25f)
+		{
+			ballPhys.pos.y = 0.25f;
+			ballPhys.vel.y = -ballPhys.vel.y * ballPhys.bounciness;
+			ballPhys.vel.x *= 0.85f;
+			ballPhys.vel.z *= 0.85f;
+			float speed = glm::length(glm::vec3(ballPhys.vel.x, ballPhys.vel.y, ballPhys.vel.z));
+			if (speed < 0.3f)
+			{
+				ballPhys.vel = Vector3(0, 0, 0);
+				ballPhys.accel = Vector3(0, 0, 0);
+				ballState = ON_COUNTER;
+			}
+		}
 
+		// define all AABBs
+		Vector3 bMins[13], bMaxs[13];
+		bMins[0] = Vector3(-10.f, 0.f, -7.65f); bMaxs[0] = Vector3(10.f, 8.f, -7.35f); // back wall
+		bMins[1] = Vector3(-10.15f, 0.f, -7.5f);  bMaxs[1] = Vector3(-9.85f, 8.f, 7.5f);  // left wall
+		bMins[2] = Vector3(9.85f, 0.f, -7.5f);  bMaxs[2] = Vector3(10.15f, 8.f, 7.5f);  // right wall
+		bMins[3] = Vector3(-10.f, 7.9f, -7.5f);  bMaxs[3] = Vector3(10.f, 8.1f, 7.5f);  // ceiling
+		bMins[4] = Vector3(-7.5f, 0.f, 4.5f);  bMaxs[4] = Vector3(7.5f, 1.f, 5.5f);  // counter
+		bMins[5] = Vector3(2.f, 1.f, -0.5f);  bMaxs[5] = Vector3(3.f, 6.f, 0.5f);  // pillar
+		bMins[6] = Vector3(-1.65f, 0.f, -1.75f);   bMaxs[6] = Vector3(1.85f, 4.f, 1.75f); // tank
+		bMins[7] = Vector3(8.0f, 0.f, -7.f);   bMaxs[7] = Vector3(9.5f, 4.5f, -3.f);   // cabinet
+		bMins[8] = Vector3(-9.35f, 0.05f, -3.45f); bMaxs[8] = Vector3(-8.45f, 0.95f, -2.55f); // box1
+		bMins[9] = Vector3(-9.35f, 1.11f, -3.45f); bMaxs[9] = Vector3(-8.45f, 2.01f, -2.55f); // box2
+		bMins[10] = Vector3(-8.35f, 0.05f, -2.45f); bMaxs[10] = Vector3(-7.45f, 0.95f, -1.55f); // box3
+		bMins[11] = Vector3(-8.35f, 0.05f, -4.45f); bMaxs[11] = Vector3(-7.45f, 0.95f, -3.55f); // box4
+		bMins[12] = Vector3(-1.f, 0.f, 9.85f);  bMaxs[12] = Vector3(1.f, 4.f, 10.15f);  // door
 
-	// === ANIMATION/INTERACTIONS ====
+		for (int i = 0; i < 13; i++)
+		{
+			if (!OverlapCircle2AABB(ballPhys.pos, r, bMins[i], bMaxs[i]))
+				continue;
 
+			float bx = ballPhys.pos.x;
+			float by = ballPhys.pos.y;
+			float bz = ballPhys.pos.z;
+
+			// penetration depth from each side
+			float penXR = bMaxs[i].x + r - bx;  // push ball right
+			float penXL = bx - (bMins[i].x - r); // push ball left
+			float penYU = bMaxs[i].y + r - by;
+			float penYD = by - (bMins[i].y - r);
+			float penZF = bMaxs[i].z + r - bz;
+			float penZB = bz - (bMins[i].z - r);
+
+			float penX = (penXR < penXL) ? penXR : penXL;
+			float penY = (penYU < penYD) ? penYU : penYD;
+			float penZ = (penZF < penZB) ? penZF : penZB;
+
+			if (penX < penY && penX < penZ)
+			{
+				if (penXR < penXL)
+				{
+					ballPhys.pos.x = bMaxs[i].x + r;
+					ballPhys.vel.x = fabsf(ballPhys.vel.x) * ballPhys.bounciness;  // always bounce right
+				}
+				else
+				{
+					ballPhys.pos.x = bMins[i].x - r;
+					ballPhys.vel.x = -fabsf(ballPhys.vel.x) * ballPhys.bounciness; // always bounce left
+				}
+			}
+			else if (penY < penZ)
+			{
+				if (penYU < penYD)
+				{
+					ballPhys.pos.y = bMaxs[i].y + r;
+					ballPhys.vel.y = fabsf(ballPhys.vel.y) * ballPhys.bounciness;  // always bounce up
+				}
+				else
+				{
+					ballPhys.pos.y = bMins[i].y - r;
+					ballPhys.vel.y = -fabsf(ballPhys.vel.y) * ballPhys.bounciness; // always bounce down
+				}
+			}
+			else
+			{
+				if (penZF < penZB)
+				{
+					ballPhys.pos.z = bMaxs[i].z + r;
+					ballPhys.vel.z = fabsf(ballPhys.vel.z) * ballPhys.bounciness;  // always bounce forward
+				}
+				else
+				{
+					ballPhys.pos.z = bMins[i].z - r;
+					ballPhys.vel.z = -fabsf(ballPhys.vel.z) * ballPhys.bounciness; // always bounce back
+				}
+			}
+		}
+
+		// Target AABB — tune these half-extents to match the visual size
+		// Target is at (3.5, 3.0, 0), scaled 1.5x, so roughly 0.6 wide/tall
+	
+		float rad = glm::radians(targetRotation);
+
+		// mirror exact same transforms as Render:
+		float offsetX = 1.5f * cosf(rad);
+		float offsetZ = -1.5f * sinf(rad);
+
+		glm::vec3 targetCenter(2.5f + offsetX, 3.0f, 0.f + offsetZ);
+
+		Vector3 targetMins(targetCenter.x - 0.7f, targetCenter.y - 0.6f, targetCenter.z - 0.1f);
+		Vector3 targetMaxs(targetCenter.x + 0.7f, targetCenter.y + 0.6f, targetCenter.z + 0.1f);
+
+		if (!targetHit && OverlapCircle2AABB(ballPhys.pos, r, targetMins, targetMaxs))
+		{
+			std::cout << "HIT! Ball at: "
+				<< ballPhys.pos.x << " "
+				<< ballPhys.pos.y << " "
+				<< ballPhys.pos.z << std::endl;
+			targetHit = true;
+			targetRotation += 90.f;  // rotate backward, adjust to taste
+			targetRotation = glm::clamp(targetRotation, 0.f, 90.f);  // stop at 90 degrees back
+
+			// Same MTV bounce logic used for all other AABBs
+			float bx = ballPhys.pos.x, by = ballPhys.pos.y, bz = ballPhys.pos.z;
+			float penXR = targetMaxs.x + r - bx, penXL = bx - (targetMins.x - r);
+			float penYU = targetMaxs.y + r - by, penYD = by - (targetMins.y - r);
+			float penZF = targetMaxs.z + r - bz, penZB = bz - (targetMins.z - r);
+			float penX = (penXR < penXL) ? penXR : penXL;
+			float penY = (penYU < penYD) ? penYU : penYD;
+			float penZ = (penZF < penZB) ? penZF : penZB;
+
+			if (penX < penY && penX < penZ)
+			{
+				if (penXR < penXL) { ballPhys.pos.x = targetMaxs.x + r; ballPhys.vel.x = fabsf(ballPhys.vel.x) * ballPhys.bounciness; }
+				else { ballPhys.pos.x = targetMins.x - r; ballPhys.vel.x = -fabsf(ballPhys.vel.x) * ballPhys.bounciness; }
+			}
+			else if (penY < penZ)
+			{
+				if (penYU < penYD) { ballPhys.pos.y = targetMaxs.y + r; ballPhys.vel.y = fabsf(ballPhys.vel.y) * ballPhys.bounciness; }
+				else { ballPhys.pos.y = targetMins.y - r; ballPhys.vel.y = -fabsf(ballPhys.vel.y) * ballPhys.bounciness; }
+			}
+			else
+			{
+				if (penZF < penZB) { ballPhys.pos.z = targetMaxs.z + r; ballPhys.vel.z = fabsf(ballPhys.vel.z) * ballPhys.bounciness; }
+				else { ballPhys.pos.z = targetMins.z - r; ballPhys.vel.z = -fabsf(ballPhys.vel.z) * ballPhys.bounciness; }
+			}
+		}
+		// Clear hit flag once ball moves away
+		if (targetHit && !OverlapCircle2AABB(ballPhys.pos, r + 0.3f, targetMins, targetMaxs))
+			targetHit = false;
+	}
+
+	// --- PICK UP (works in any state except HELD) ---
+	if (ballState != HELD)
+	{
+		glm::vec3 ballPos(ballPhys.pos.x, ballPhys.pos.y, ballPhys.pos.z);
+		float dist = glm::length(ballPos - camera.position);
+		if (dist < 3.0f && KeyboardController::GetInstance()->IsKeyPressed('F'))
+		{
+			ballPhys.vel = Vector3(0, 0, 0);
+			ballPhys.accel = Vector3(0, 0, 0);
+			ballState = HELD;
+		}
+	}
+
+	//Door interaction
+	showInteractPrompt = false;
+	if (door.IsPlayerNear(camera.position, 2.5f))
+	{
+		//if (SceneManager::GetInstance()->getIsGameCompleted(SceneManager::SCENE_TANK))
+			showInteractPrompt = true;
+
+		/*else
+			showLockedPrompt = true;*/
+	}
+	if (showInteractPrompt && KeyboardController::GetInstance()->IsKeyPressed('F'))
+	{
+		door.Open();
+	}
+
+	if (door.Update(dt, camera.position, playerSize.x * 0.5f, playerSize.z * 0.5f))
+	{
+		SceneManager::GetInstance()->SwitchScene(door.leadsTo);
+		door.Close();
+		showInteractPrompt = false;
+	}
+
+	// hidden ball near boxes
+	if (!hiddenBall1Found)
+	{
+		glm::vec3 boxPos(-8.9f, 0.5f, -3.f);
+		float dist = glm::length(boxPos - camera.position);
+		if (dist < 3.0f)
+		{
+			hudMessage = "There seems to be something there...";
+			if (MouseController::GetInstance()->IsButtonPressed(GLFW_MOUSE_BUTTON_LEFT))
+			{
+				hiddenBall1Found = true;
+				hudMessage = "Ball found! Go to the counter!";
+				hudMessageTimer = 3.f;
+			}
+		}
+	}
+
+	// hidden ball near cabinet
+	if (!hiddenBall2Found)
+	{
+		glm::vec3 cabinetPos(8.9f, 0.f, -5.f);
+		float dist = glm::length(cabinetPos - camera.position);
+		if (dist < 3.0f)
+		{
+			hudMessage = "There seems to be something there...";
+			if (MouseController::GetInstance()->IsButtonPressed(GLFW_MOUSE_BUTTON_LEFT))
+			{
+				hiddenBall2Found = true;
+				hudMessage = "Ball found! Go to the counter!";
+				hudMessageTimer = 3.f;
+			}
+		}
+	}
+
+	// clear hud message after timer
+	if (hudMessageTimer > 0.f)
+	{
+		hudMessageTimer -= static_cast<float>(dt);
+		if (hudMessageTimer <= 0.f)
+			hudMessage = "";
+	}
 
 
 }
@@ -292,7 +679,7 @@ void SceneTank::Render()
 	// render tests
 
 	modelStack.PushMatrix();                        // >>> BOOTH ROOT
-	modelStack.Translate(0.f, 0.f, 0.f);           // booth world origin
+	//modelStack.Translate(0.f, 0.f, 0.f);           // booth world origin
 
 	// ---- FLOOR ----
 	modelStack.PushMatrix();                    // >>> Floor
@@ -328,16 +715,53 @@ void SceneTank::Render()
 	// ---- LEFT WALL ----
 	modelStack.PushMatrix();                    // >>> Left Wall
 	modelStack.Translate(-10.f, 4.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
+	modelStack.Scale(0.3f, 8.f, 20.f);
 	RenderMesh(meshList[GEO_WALL], true);       // reuses same mesh + material
 	modelStack.PopMatrix();                     // <<< Left Wall
-
 	// ---- RIGHT WALL ----
 	modelStack.PushMatrix();                    // >>> Right Wall
 	modelStack.Translate(10.f, 4.f, 0.f);
-	modelStack.Scale(0.3f, 8.f, 15.f);
+	modelStack.Scale(0.3f, 8.f, 20.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();                     // <<< Right Wall
+
+	// front wall left side
+	modelStack.PushMatrix();
+	modelStack.Translate(-5.5f, 4.f, 10.f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// front wall right side
+	modelStack.PushMatrix();
+	modelStack.Translate(5.5f, 4.f, 10.f);
+	modelStack.Scale(9.f, 8.f, 0.3f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// front wall above door
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 6.f, 10.f);
+	modelStack.Scale(2.f, 4.0f, 0.3f);
+	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// door
+	modelStack.PushMatrix();
+	//modelStack.Translate(0.f, 2.f, 10.f);   // centered in door gap
+	modelStack.Translate(door.position.x, door.position.y, door.position.z);
+	modelStack.Rotate(door.rotation, 0.f, 1.f, 0.f);
+	modelStack.Rotate(180.f, 0.f, 1.f, 0.f);   // rotate to face inward
+	modelStack.Translate(door.width * 0.5f, 0.f, 0.f);   // pivot on left edge
+	modelStack.Scale(2.f, 4.f, 0.3f);       // matches door gap width/height
+
+	meshList[GEO_DOOR]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.5f);
+	meshList[GEO_DOOR]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+	meshList[GEO_DOOR]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+	meshList[GEO_DOOR]->material.kShininess = 5.0f;
+
+	RenderMesh(meshList[GEO_DOOR], true);
+	modelStack.PopMatrix();
 
 	// dunk tank
 	modelStack.PushMatrix();
@@ -379,16 +803,16 @@ void SceneTank::Render()
 
 	// target
 	modelStack.PushMatrix();
-	modelStack.Translate(3.5f, 3.f, 0.f);
+	modelStack.Translate(2.5f, 3.5f, 0.f);        // pivot at pillar top (pillar x=2.5, top y=3.5)
+	modelStack.Rotate(targetRotation, 0.f, 1.f, 0.f);  // Y axis spin like your screenshot
+	modelStack.Translate(1.0f, -0.5f, 0.f);       // offset to where target hangs off pillar
 	modelStack.Rotate(90.0f, 0, 1, 0);
 	modelStack.Rotate(270.0f, 1, 0, 0);
 	modelStack.Scale(1.5f, 1.5f, 1.5f);
-
 	meshList[GEO_TARGET]->material.kAmbient = glm::vec3(0.2f, 0.1f, 0.1f);
 	meshList[GEO_TARGET]->material.kDiffuse = glm::vec3(0.9f, 0.3f, 0.3f);
 	meshList[GEO_TARGET]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
 	meshList[GEO_TARGET]->material.kShininess = 2.0f;
-
 	RenderMesh(meshList[GEO_TARGET], true);
 	modelStack.PopMatrix();
 
@@ -409,7 +833,7 @@ void SceneTank::Render()
 
 	// counter
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 0.5f, 3.f);
+	modelStack.Translate(0.f, 0.5f, 5.f);
 
 	meshList[GEO_COUNTER]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
 	meshList[GEO_COUNTER]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
@@ -421,7 +845,7 @@ void SceneTank::Render()
 
 	// balls
 	modelStack.PushMatrix();
-	modelStack.Translate(1.f, 1.1f, 3.f);
+	modelStack.Translate(ballPhys.pos.x, ballPhys.pos.y, ballPhys.pos.z);
 	modelStack.Scale(0.3f, 0.3f, 0.3f);
 
 	meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.25f, 0.22f, 0.18f);
@@ -431,6 +855,33 @@ void SceneTank::Render()
 	
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
+
+	if (hiddenBall1Found)
+	{
+		modelStack.PushMatrix();
+		modelStack.Translate(1.5f, 1.1f, 3.f);  // on counter next to main ball
+		modelStack.Scale(0.3f, 0.3f, 0.3f);
+		meshList[GEO_BALL2]->material.kAmbient = glm::vec3(0.25f, 0.22f, 0.18f);
+		meshList[GEO_BALL2]->material.kDiffuse = glm::vec3(0.9f, 0.85f, 0.7f);
+		meshList[GEO_BALL2]->material.kSpecular = glm::vec3(0.15f, 0.15f, 0.15f);
+		meshList[GEO_BALL2]->material.kShininess = 8.0f;
+		RenderMesh(meshList[GEO_BALL2], true);
+		modelStack.PopMatrix();
+	}
+
+	if (hiddenBall2Found)
+	{
+		modelStack.PushMatrix();
+		modelStack.Translate(-1.5f, 1.1f, 3.f);  // on counter other side
+		modelStack.Scale(0.3f, 0.3f, 0.3f);
+		meshList[GEO_BALL3]->material.kAmbient = glm::vec3(0.25f, 0.22f, 0.18f);
+		meshList[GEO_BALL3]->material.kDiffuse = glm::vec3(0.9f, 0.85f, 0.7f);
+		meshList[GEO_BALL3]->material.kSpecular = glm::vec3(0.15f, 0.15f, 0.15f);
+		meshList[GEO_BALL3]->material.kShininess = 8.0f;
+		RenderMesh(meshList[GEO_BALL3], true);
+		modelStack.PopMatrix();
+	}
+
 
 	// box
 	modelStack.PushMatrix();
@@ -501,7 +952,69 @@ void SceneTank::Render()
 	RenderMesh(meshList[GEO_CABINET], true);
 	modelStack.PopMatrix();
 
+	// HUD text
+	if (ballState == ON_COUNTER)
+	{
+		glm::vec3 ballPos(ballPhys.pos.x, ballPhys.pos.y, ballPhys.pos.z);
+		float dist = glm::length(ballPos - camera.position);
+
+		if (dist < 3.0f)
+		{
+			RenderTextOnScreen(meshList[GEO_TEXT], "Press F to pick up ball",
+				glm::vec3(1, 1, 0), 30, 70, 70);
+		}
+	}
+
+	if (ballState == HELD)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "Hold LMB to charge throw",
+			glm::vec3(1, 1, 1), 30, 50, 100);
+
+		// Show charge bar as text
+		int bars = (int)(throwPower / 20.f * 10.f); // 0-10
+		std::string chargeBar = "Power: [";
+		for (int i = 0; i < 10; i++)
+			chargeBar += (i < bars) ? "#" : "-";
+		chargeBar += "]";
+
+		RenderTextOnScreen(meshList[GEO_TEXT], chargeBar,
+			glm::vec3(1, 0.3f, 0.3f), 30, 120, 60);
+
+		RenderTextOnScreen(meshList[GEO_TEXT], "CLick LMB once to drop",
+			glm::vec3(0.7f, 0.7f, 0.7f), 25, 120, 20);
+	}
+
+	if (ballState == THROWN)
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], "Ball in flight!",
+			glm::vec3(0.3f, 1.f, 0.3f), 30, 200, 100);
+	}
+
+	if (!hudMessage.empty())
+	{
+		RenderTextOnScreen(meshList[GEO_TEXT], hudMessage,
+			glm::vec3(1, 1, 0), 25, 100, 300);  // moved to center screen
+	}
+	
+	if (showInteractPrompt)
+		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
+
 	modelStack.PopMatrix();
+
+	for (const AABB& box : collisionBoxes)
+	{
+		glm::vec3 center = (box.min + box.max) * 0.5f;
+		glm::vec3 size = box.max - box.min;
+		modelStack.PushMatrix();
+		modelStack.Translate(center.x, center.y, center.z);
+		modelStack.Scale(size.x, size.y, size.z);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		glDisable(GL_CULL_FACE);
+		RenderMesh(meshList[GEO_CUBE], false);
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		glEnable(GL_CULL_FACE);
+		modelStack.PopMatrix();
+	}
 }
 
 void SceneTank::RenderMesh(Mesh* mesh, bool enableLight)
@@ -714,33 +1227,33 @@ void SceneTank::HandleKeyPress()
 }
 
 void SceneTank::HandleMouseInput() {
-	static bool isLeftUp = false;
-	static bool isRightUp = false;
+	//static bool isLeftUp = false;
+	//static bool isRightUp = false;
 
-	// Process Left button
-	if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = true;
-		std::cout << "LBUTTON DOWN" << std::endl;
+	//// Process Left button
+	//if (!isLeftUp && MouseController::GetInstance()->IsButtonDown(GLFW_MOUSE_BUTTON_LEFT))
+	//{
+	//	isLeftUp = true;
+	//	std::cout << "LBUTTON DOWN" << std::endl;
 
-		// transform into UI space
-		double x = MouseController::GetInstance()->GetMousePositionX();
-		double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
+	//	// transform into UI space
+	//	double x = MouseController::GetInstance()->GetMousePositionX();
+	//	double y = 1080 - MouseController::GetInstance()->GetMousePositionY();
 
-		// Check if mouse click position is within the GUI box
-		// Change the boundaries as necessary
-		if (x > 0 && x < 100 && y > 0 && y < 100) {
-			std::cout << "GUI IS CLICKED" << std::endl;
-		}
+	//	// Check if mouse click position is within the GUI box
+	//	// Change the boundaries as necessary
+	//	if (x > 0 && x < 100 && y > 0 && y < 100) {
+	//		std::cout << "GUI IS CLICKED" << std::endl;
+	//	}
 
-	}
-	else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
-	{
-		isLeftUp = false;
-		std::cout << "LBUTTON UP" << std::endl;
-	}
+	//}
+	//else if (isLeftUp && MouseController::GetInstance()->IsButtonUp(GLFW_MOUSE_BUTTON_LEFT))
+	//{
+	//	isLeftUp = false;
+	//	std::cout << "LBUTTON UP" << std::endl;
+	//}
 
-	// Continue to do for right button
+	//// Continue to do for right button
 }
 
 

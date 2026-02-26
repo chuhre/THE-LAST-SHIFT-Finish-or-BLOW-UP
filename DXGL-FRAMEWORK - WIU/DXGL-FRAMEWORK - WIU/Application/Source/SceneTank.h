@@ -7,6 +7,11 @@
 #include "FPCamera.h"
 #include "MatrixStack.h"
 #include "Light.h"
+#include "Vector3.h"
+#include "PhysicsObject.h"
+#include "CollisionDetection.h"
+#include "Door.h"
+
 
 class SceneTank : public Scene
 {
@@ -29,10 +34,13 @@ public:
 		GEO_BOX3,
 		GEO_BOX4,
 		GEO_BALL,
+		GEO_BALL2,
+		GEO_BALL3,
 		GEO_PLANK,
 		GEO_COUNTER,
 		GEO_PILLAR,
 		GEO_CABINET,
+		GEO_DOOR,
 
 		GEO_LEFT,
 		GEO_RIGHT,
@@ -127,56 +135,77 @@ private:
 	Light light[NUM_LIGHTS];
 	bool enableLight;
 
+	// collision objects
+	PhysicsObject wallBack, wallLeft, wallRight, wallCeiling;
+	PhysicsObject objCounter, objPillar, objTank, objCabinet;
+	PhysicsObject objBox1, objBox2, objBox3, objBox4;
 
+	struct AABB {
+		glm::vec3 min, max;
+	};
 
+	std::vector<AABB> collisionBoxes;
+	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
+	void BuildCollisionBoxes();
 
+	// ball phys
+	PhysicsObject ballPhys;
+	bool ballThrown = false;
+	float ballRadius = 0.15f; // matches your Scale(0.3f)
+	
+	// Ball state machine
+	enum BallState { ON_COUNTER, HELD, THROWN, RESET };
+	BallState ballState = ON_COUNTER;
 
-	// ANIMATIONS/INTERACTIONS
+	// Throw charging
+	float throwPower = 0.f;
+	bool isCharging = false;
+	 
+	// Target object for throwing, can be static or dynamic
+	PhysicsObject objTarget;
+	float targetRotation = 0.f;
+
+	// hidden balls
+	bool hiddenBall1Found = false;  // box
+	bool hiddenBall2Found = false;  // cabinet
+	
+	// text timer
+	std::string hudMessage = "";
+	float hudMessageTimer = 0.f;
+
 	// door
-	float doorRotation;  // 0 = closed, 90 = open
-	bool isDoorOpen;
-	glm::vec3 doorPosition; // Store door position
-	// Helper function to check if player is near door
-	bool IsPlayerNearDoor(float radius);
+	Door door;
+	bool showInteractPrompt;
+	bool showLockedPrompt;
 
+	// door animation
+	bool doorOpen = false;
+	float doorAngle = 0.f;
 
-	// light 
-	glm::vec3 lightSwitchPosition;
-	bool isLightSwitchOn;
-	float leverRotation;
+	// For camera-relative throwing
+	glm::vec3 ballRestPos = glm::vec3(1.f, 1.1f, 5.f);
 
-	bool IsPlayerNearLightSwitch(float radius);
+	// target as static AABB (world position)
+	glm::vec3 targetPos = glm::vec3(3.5f, 3.f, 0.f);
+	
+	// for walls and boxes, we can define AABBs in world space for simple collision detection with the player
+	/*struct AABB {
+		glm::vec3 min;
+		glm::vec3 max;
+	};
 
+	std::vector<AABB> collisionBoxes;
+	const float PLAYER_RADIUS = 0.4f;
 
-	// shutter
-	glm::vec3 shutterButtonPosition;
-	bool isShutterOpen;
-	float shutterHeight;
-	float buttonPressDepth;
+	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
+	void BuildCollisionBoxes();
+	void ResolvePlayerCollisions(const glm::vec3& oldPos);*/
 
-	bool IsPlayerNearShutterButton(float radius);
-
-
-
-	// Game state
-	GameState gameState;
-	CustomerState customerState;
-
-	int playerLives;
-	int customersServed;  // Total correct serves to win
-
-	glm::vec3 npcPosition;
-	bool isMonster;        // Is current customer a monster?
-	bool hasTaco;         // Is player holding taco?
-	float customerTimer;  // Timer for customer events
-
-	bool showNPC;         // Simple flag to show/hide NPC
-
-
-
+	// target
+	bool targetHit = false;
+	
 	// Collision detection
 	glm::vec3 playerSize;
-	bool CheckWallCollision(const glm::vec3& pos);
 
 	void RenderSkybox();
 	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
@@ -189,7 +218,6 @@ private:
 	void RenderTextOnScreen(Mesh* mesh, std::string text,
 		glm::vec3 color, float size, float x, float y);
 
-	float fps = 0;
 };
 
 #endif
