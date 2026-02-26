@@ -159,6 +159,8 @@ void SceneDucks::Init()
 	meshList[GEO_TOYPLANE] = MeshBuilder::GenerateOBJ("Toyplane", "Models//toyplane.obj");
 	meshList[GEO_TOYPLANE]->textureID = LoadTGA("Images//toyplane.tga");
 	meshList[GEO_DUCKBASKETBALL] = MeshBuilder::GenerateOBJ("Duckbasketball", "Models//duckbasketball.obj");
+	meshList[GEO_BOMB] = MeshBuilder::GenerateOBJMTL("Bomb", "Models//round_bomb.obj", "Models//round_bomb.mtl");
+	meshList[GEO_BOMB]->textureID = LoadTGA("Images//bomb_baseColor.tga");
 
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
 	projectionStack.LoadMatrix(projection);
@@ -766,6 +768,17 @@ void SceneDucks::Render()
 	meshList[GEO_DUCKBASKETBALL]->material.kSpecular = glm::vec3(0.15f, 0.1f, 0.05f);
 	meshList[GEO_DUCKBASKETBALL]->material.kShininess = 12.f;
 	RenderMesh(meshList[GEO_DUCKBASKETBALL], true);
+	modelStack.PopMatrix();
+
+	// BOMB
+	modelStack.PushMatrix();             
+	modelStack.Translate(-8.5f, 1.1f, 0.4);
+	modelStack.Scale(6.f, 6.f, 6.f);
+	meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);
+	meshList[GEO_BOMB]->material.kSpecular = glm::vec3(0.4f, 0.4f, 0.4f);
+	meshList[GEO_BOMB]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_BOMB], true);
 	modelStack.PopMatrix();
 
 	if (!hookPickedUp)

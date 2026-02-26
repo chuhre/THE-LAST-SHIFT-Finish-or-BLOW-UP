@@ -62,6 +62,7 @@ public:
 		GEO_TOYTRAIN,
 		GEO_TOYPLANE,
 		GEO_DUCKBASKETBALL,
+		GEO_BOMB,
 
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
