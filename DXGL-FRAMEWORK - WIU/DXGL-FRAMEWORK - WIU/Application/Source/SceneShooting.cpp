@@ -92,7 +92,7 @@ void SceneShooting::Init()
 
 	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 10000.f, 10000.f, 10000.f);
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
-	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
+	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.f, 0.f, 0.f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 
 
@@ -178,7 +178,7 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 	gameState = STATE_FIND_GUN;
 	bulletsLeft = MAX_BULLETS;
 	targetsHit = 0;
-	bombTimer = 30.0f;		// 30s to defuse and win game
+	bombTimer = 20.0f;		// 20s to defuse and win game
 	gunPickedUp = false;
 	muzzleFlashTimer = 0.f;
 	fps = 0.f;
@@ -766,6 +766,19 @@ void SceneShooting::Render()
 	modelStack.PopMatrix();
 
 
+	// Black void wall behind door
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 4.f, 7.9f);   
+	modelStack.Scale(4.f, 8.f, 0.1f);
+
+	meshList[GEO_CUBE]->material.kAmbient = glm::vec3(0.f, 0.f, 0.f);
+	meshList[GEO_CUBE]->material.kDiffuse = glm::vec3(0.f, 0.f, 0.f);
+	meshList[GEO_CUBE]->material.kSpecular = glm::vec3(0.f, 0.f, 0.f);
+	meshList[GEO_CUBE]->material.kShininess = 0.f;
+	RenderMesh(meshList[GEO_CUBE], false);
+	modelStack.PopMatrix();
+
+
 	// ------------------------------------------------------------------
 	// COUNTER (PARENT)
 	//   World position: centred X, Y=0.5, Z=1.5
@@ -1330,7 +1343,7 @@ void SceneShooting::ResetGame()
 	gameState = STATE_FIND_GUN;
 	bulletsLeft = MAX_BULLETS;
 	targetsHit = 0;
-	bombTimer = 30.0f;
+	bombTimer = 20.0f;
 	gunPickedUp = false;
 	fps = 0.f;
 	muzzleFlashTimer = 0.f;
@@ -1566,7 +1579,6 @@ void SceneShooting::HandleKeyPress()
 		{
 			gunPickedUp = true;
 			// just picks up gun, player still walks freely
-			collisionBoxes.pop_back(); // removes the gun box (it was last added)
 		}
 
 		// Step 2: walk to counter and press F to start
@@ -1577,7 +1589,7 @@ void SceneShooting::HandleKeyPress()
 			glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); // hide cursor
 			camera.Init(shootingPos, shootingTarget, glm::vec3(0.f, 1.f, 0.f));
 			gameState = STATE_PLAYING;
-			bombTimer = 30.0f;
+			bombTimer = 20.0f;
 		}
 	}
 
