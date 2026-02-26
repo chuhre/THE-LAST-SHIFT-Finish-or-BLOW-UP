@@ -219,7 +219,7 @@ private:
 	void RenderMeshOnScreen(Mesh* mesh, float x, float y,
 		float sizex, float sizey);
 
-	void HandleMouseInput();
+	//void HandleMouseInput();
 
 	void RenderText(Mesh* mesh, std::string text, glm::vec3
 		color);
