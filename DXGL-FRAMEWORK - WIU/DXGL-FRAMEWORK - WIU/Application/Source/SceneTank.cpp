@@ -121,6 +121,7 @@ void SceneTank::Init()
 	meshList[GEO_BOX4]->textureID = LoadTGA("Images//box.tga");
 	meshList[GEO_CABINET] = MeshBuilder::GenerateOBJ("Cabinet", "Models//iron_cabinet.obj");
 	meshList[GEO_CABINET]->textureID = LoadTGA("Images//iron_cabinet_MT_BaseColor.1002.tga");
+	meshList[GEO_BALLOON] = MeshBuilder::GenerateOBJ("Balloon", "Models//balloon.obj");
 
 	// text
 	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
@@ -130,9 +131,10 @@ void SceneTank::Init()
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 20.f);  // dark wood brown
 
 	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f); // light tan canvas
+	meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
 
 	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);   // carnival cream
-																													   // scaled per-wall in Render()
+	meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");																					   // scaled per-wall in Render()
 
 
 	// Skybox NIGHT
@@ -200,7 +202,7 @@ void SceneTank::Init()
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
-	light[0].position = glm::vec3(0, 5, 0);
+	light[0].position = glm::vec3(0, 6, 3);
 	light[0].color = glm::vec3(1, 1, 1);
 	light[0].type = Light::LIGHT_POINT;
 	light[0].power = 1;
@@ -777,6 +779,7 @@ void SceneTank::Render()
 	modelStack.Scale(0.3f, 8.f, 20.f);
 	RenderMesh(meshList[GEO_WALL], true);       // reuses same mesh + material
 	modelStack.PopMatrix();                     // <<< Left Wall
+	
 	// ---- RIGHT WALL ----
 	modelStack.PushMatrix();                    // >>> Right Wall
 	modelStack.Translate(10.f, 4.f, 0.f);
@@ -803,6 +806,32 @@ void SceneTank::Render()
 	modelStack.Translate(0.f, 6.f, 10.f);
 	modelStack.Scale(2.f, 4.0f, 0.3f);
 	RenderMesh(meshList[GEO_WALL], true);
+	modelStack.PopMatrix();
+
+	// balloon 1
+	modelStack.PushMatrix();
+	modelStack.Translate(8.3f, 5.f, 2.f);
+	modelStack.Scale(0.5f, 0.5f, 0.5f);
+
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.0f, 0.2f, 0.5f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(0.1f, 0.4f, 0.8f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(0.9f, 0.9f, 1.0f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+
+	RenderMesh(meshList[GEO_BALLOON], true);
+	modelStack.PopMatrix();
+
+	// balloon2
+	modelStack.PushMatrix();
+	modelStack.Translate(-8.3f, 5.f, 2.f);
+	modelStack.Scale(0.5f, 0.5f, 0.5f);
+
+	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.4f, 0.0f, 0.0f);
+	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(1.0f, 0.1f, 0.1f);
+	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(1.0f, 0.8f, 0.8f);
+	meshList[GEO_BALLOON]->material.kShininess = 64.f;
+
+	RenderMesh(meshList[GEO_BALLOON], true);
 	modelStack.PopMatrix();
 
 	// door

@@ -44,6 +44,7 @@ public:
 		GEO_CABINET,
 		GEO_DOOR,
 		GEO_DUMMY,
+		GEO_BALLOON,
 
 		GEO_LEFT,
 		GEO_RIGHT,
