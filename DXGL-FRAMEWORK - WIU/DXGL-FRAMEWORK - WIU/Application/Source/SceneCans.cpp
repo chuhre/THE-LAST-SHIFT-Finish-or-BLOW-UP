@@ -536,29 +536,30 @@ void SceneCans::Render()
 		meshList[GEO_COUNTER]->material.kShininess = 8.f;
 		RenderMesh(meshList[GEO_COUNTER], true);
 
-		//render ball on counter
-		modelStack.PushMatrix();
-		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
-		modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
-		modelStack.Scale(15.f, 6.f, 6.f);
-		modelStack.Rotate(0, renderBall, 0, 0);
-		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-		RenderMesh(meshList[GEO_BALL], true);
-		modelStack.PopMatrix();
+		//only render ball if NOT in air
+		if (!m_balls[0].inAir)
+		{
+			modelStack.PushMatrix();
+			modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
+			modelStack.Scale(15.f, 6.f, 6.f);
+			meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_BALL], true);
+			modelStack.PopMatrix();
+		}
 
-		//render 2nd ball
-		modelStack.PushMatrix();
-		modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
-		modelStack.Scale(15.f, 6.f, 6.f);
-		modelStack.Rotate(0, renderBall, 0, 0);
-		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
-		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
-		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
-		RenderMesh(meshList[GEO_BALL], true);
-		modelStack.PopMatrix();
-
+		if (!m_balls[1].inAir)
+		{
+			modelStack.PushMatrix();
+			modelStack.Translate(m_balls[1].ball.pos.x, m_balls[1].ball.pos.y, m_balls[1].ball.pos.z);
+			modelStack.Scale(15.f, 6.f, 6.f);
+			meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+			meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+			meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+			RenderMesh(meshList[GEO_BALL], true);
+			modelStack.PopMatrix();
+		}
 		modelStack.PopMatrix();
 	}
 
@@ -573,6 +574,19 @@ void SceneCans::Render()
 	RenderMesh(meshList[GEO_BALL], true);
 	modelStack.PopMatrix();
 
+
+	// Render thrown ball in WORLD space
+	if (m_balls[0].inAir)
+	{
+		modelStack.PushMatrix();
+		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
+		modelStack.Scale(0.15f, 0.15f, 0.15f);  // world-scale size, tune as needed
+		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
+		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
+		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
+		RenderMesh(meshList[GEO_BALL], true);
+		modelStack.PopMatrix();
+	}
 
 	//render ball on screen, looks like player is holding it
 	if (ballCollected && !m_isAiming)
