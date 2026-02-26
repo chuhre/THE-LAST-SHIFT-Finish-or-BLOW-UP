@@ -171,6 +171,7 @@ private:
 	};
 
 	std::vector<AABB> collisionBoxes;
+	int doorCollisionIndex;	
 	bool CheckAABBCollision(const glm::vec3& pos, float radius, const AABB& box);
 	void BuildCollisionBoxes();
 
