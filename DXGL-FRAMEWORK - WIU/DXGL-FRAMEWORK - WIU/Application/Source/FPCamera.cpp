@@ -45,7 +45,7 @@ void FPCamera::Update(double dt)
 	// Store current pitch angle to clamp it
 	static float currentPitch = 0.0f;
 
-	if (MouseController::GetInstance()->IsButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))
+	/*if (MouseController::GetInstance()->IsButtonPressed(GLFW_MOUSE_BUTTON_RIGHT))*/
 	{
 		//mouse input
 		double deltaX = MouseController::GetInstance()->GetMouseDeltaX();

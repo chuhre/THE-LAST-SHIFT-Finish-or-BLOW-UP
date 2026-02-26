@@ -22,6 +22,13 @@ struct Duck
 	float     bobTimer;     // time accumulator for bobbing
 };
 
+struct DAABB {
+	glm::vec3 min;
+	glm::vec3 max;
+
+	DAABB() : min(0.0f), max(0.0f) {}
+	DAABB(const glm::vec3& min, const glm::vec3& max) : min(min), max(max) {}
+};
 
 class SceneDucks : public Scene
 {
@@ -197,9 +204,6 @@ private:
 	glm::vec3 savedCamTarget;   // FP target saved before entering top-down
 	glm::vec3 savedCamUp;       // FP up saved before entering top-down
 
-	// Collision
-	glm::vec3 playerSize;
-	bool CheckWallCollision(const glm::vec3& pos);
 
 	float fps = 0;
 
@@ -207,6 +211,13 @@ private:
 	static const int NUM_DOORS = 2;
 	Door door[NUM_DOORS];
 	bool showInteractPrompt;
+
+
+	// Collision detection
+	std::vector<DAABB> collisionBoxes;
+	glm::vec3 playerSize;
+	bool CheckDAABBCollision(const glm::vec3& pos, float radius, const DAABB& box);
+	void BuildCollisionBoxes();
 };
 
 #endif

@@ -53,7 +53,7 @@ void SceneManager::Init(void)
     scenes[SCENE_TANK] = new SceneTank();
 
     // Initialize the first scene
-    currentSceneType = SCENE_CANS;
+    currentSceneType = SCENE_DUCKS;
     currentScene = scenes[currentSceneType];
     currentScene->Init();
 }

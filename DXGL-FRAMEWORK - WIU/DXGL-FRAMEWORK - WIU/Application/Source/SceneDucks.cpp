@@ -81,6 +81,8 @@ void SceneDucks::Init()
 	glEnable(GL_CULL_FACE);
 	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
+	glfwSetInputMode(m_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+
 	glGenVertexArrays(1, &m_vertexArrayID);
 	glBindVertexArray(m_vertexArrayID);
 
@@ -113,17 +115,19 @@ void SceneDucks::Init()
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
 	camera.Init(
-		glm::vec3(0, 2.1f, 10),
-		glm::vec3(0, 2, 0),
+		glm::vec3(0, 1.8f, 10),
+		glm::vec3(0, 1.7f, 0),
 		glm::vec3(0, 1.0f, 0)
 	);
 
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
 		meshList[i] = nullptr;
 
-	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 10000.f, 10000.f, 10000.f);
+	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 0000.f, 0000.f, 0000.f);
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
+	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.5f, 0.5f, 0.5f), 1.f);
+
 
 	meshList[GEO_POOL] = MeshBuilder::GenerateOBJ("Pool", "Models//pool.obj");
 	meshList[GEO_POOL]->textureID = LoadTGA("Images//pool1.tga");
@@ -170,6 +174,8 @@ void SceneDucks::Init()
 	catchTimer = 0.f;
 
 	InitDucks();
+	BuildCollisionBoxes(); 
+
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
@@ -305,8 +311,39 @@ void SceneDucks::Update(double dt)
 		light[0].position.y += static_cast<float>(dt) * 5.f;
 
 	glm::vec3 oldPos = camera.position;
+	glm::vec3 oldTarget = camera.target;
+
 	if (!isTopDown)
 		camera.Update(dt);
+
+	glm::vec3 updatedPos = camera.position;
+
+	// Vertical collision (floor/ceiling)
+	camera.position = glm::vec3(oldPos.x, updatedPos.y, oldPos.z);
+	for (const DAABB& box : collisionBoxes)
+	{
+		if (CheckDAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.y = oldPos.y;
+			camera.target.y = oldTarget.y;
+			break;
+		}
+	}
+
+	// Horizontal collision (walls)
+	float currentY = camera.position.y;
+	camera.position = glm::vec3(updatedPos.x, currentY, updatedPos.z);
+	for (const DAABB& box : collisionBoxes)
+	{
+		if (CheckDAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.x = oldPos.x;
+			camera.position.z = oldPos.z;
+			camera.target.x = oldTarget.x;
+			camera.target.z = oldTarget.z;
+			break;
+		}
+	}
 
 	if (catchTimer > 0.f)
 		catchTimer -= static_cast<float>(dt);
@@ -736,6 +773,23 @@ void SceneDucks::Render()
 		modelStack.PopMatrix();
 	}
 
+	//// DEBUG: draw collision boxes as wireframes
+	//for (const DAABB& box : collisionBoxes)
+	//{
+	//	glm::vec3 center = (box.min + box.max) * 0.5f;
+	//	glm::vec3 size = box.max - box.min;
+
+	//	modelStack.PushMatrix();
+	//	modelStack.Translate(center.x, center.y, center.z);
+	//	modelStack.Scale(size.x, size.y, size.z);
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	//	glDisable(GL_CULL_FACE);
+	//	RenderMesh(meshList[GEO_CUBE], false);
+	//	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	//	glEnable(GL_CULL_FACE);
+	//	modelStack.PopMatrix();
+	//}
+
 	// HUD
 	if (gameState == STATE_FIND_HOOK)
 	{
@@ -743,7 +797,7 @@ void SceneDucks::Render()
 			"Find the hook!", glm::vec3(1, 1, 0), 30.f, 90.f, 540.f);
 		if (IsPlayerNearHook(5.0f))
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"[F] Pick up Hook", glm::vec3(1, 1, 1), 35.f, 300.f, 480.f);
+				"[F] Pick up Hook", glm::vec3(1, 1, 1), 30.f, 180.f, 180.f);
 	}
 	if (gameState == STATE_PLAYING)
 	{
@@ -753,13 +807,13 @@ void SceneDucks::Render()
 
 		if (!isTopDown && IsPlayerNearPool(7.f))
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"[E] Play Duck Game", glm::vec3(1, 1, 0), 30.f, 230.f, 480.f);
+				"[E] Play Duck Game", glm::vec3(1, 1, 0), 30.f, 130.f, 60.f);
 
 		if (isTopDown)
 		{
-			RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
+			//RenderTextOnScreen(meshList[GEO_TEXT], "+", glm::vec3(1, 1, 1), 40.f, 390.f, 285.f);
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"[E] Exit Duck Game", glm::vec3(1, 1, 0), 30.f, 230.f, 540.f);
+				"[E] Exit Duck Game", glm::vec3(1, 1, 0), 30.f, 130.f, 60.f);
 		}
 
 		if (catchTimer > 0.f)
@@ -773,7 +827,7 @@ void SceneDucks::Render()
 	if (gameState == STATE_WON)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"You caught them all!", glm::vec3(0, 1, 0), 40.f, 200.f, 400.f);
+			"BOMB DEFUSED!!!", glm::vec3(0, 1, 0), 40.f, 200.f, 400.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
 			"[R] Return to Lobby", glm::vec3(1, 1, 0), 30.f, 220.f, 340.f);
 	}
@@ -1167,4 +1221,79 @@ void SceneDucks::HandleMouseInput()
 	}
 
 	wasLeftDown = isLeftDown;
+}
+
+bool SceneDucks::CheckDAABBCollision(const glm::vec3& pos, float radius, const DAABB& box)
+{
+	glm::vec3 closestPoint;
+	closestPoint.x = glm::clamp(pos.x, box.min.x, box.max.x);
+	closestPoint.y = glm::clamp(pos.y, box.min.y, box.max.y);
+	closestPoint.z = glm::clamp(pos.z, box.min.z, box.max.z);
+	float distance = glm::distance(closestPoint, pos);
+	return distance < radius;
+}
+
+void SceneDucks::BuildCollisionBoxes()
+{
+	collisionBoxes.clear();
+
+	// Floor
+	DAABB floor;
+	floor.min = glm::vec3(-10.f, -2.5f, -7.5f);
+	floor.max = glm::vec3(10.f, 1.3f, 17.5f);
+	collisionBoxes.push_back(floor);
+
+	// Back wall (z = -7.5)
+	DAABB backWall;
+	backWall.min = glm::vec3(-10.f, -2.f, -7.6f);
+	backWall.max = glm::vec3(10.f, 8.f, -7.4f);
+	collisionBoxes.push_back(backWall);
+
+	// Left wall (x = -10)
+	DAABB leftWall;
+	leftWall.min = glm::vec3(-10.2f, -2.f, -7.5f);
+	leftWall.max = glm::vec3(-9.5f, 8.f, 17.5f);
+	collisionBoxes.push_back(leftWall);
+
+	// Right wall (x = 10)
+	DAABB rightWall;
+	rightWall.min = glm::vec3(9.5f, -2.f, -7.5f);
+	rightWall.max = glm::vec3(10.2f, 8.f, 17.5f);
+	collisionBoxes.push_back(rightWall);
+
+	// Back wall L (z = 17.5, right side)
+	DAABB backWallL;
+	backWallL.min = glm::vec3(1.f, -2.f, 17.3f);
+	backWallL.max = glm::vec3(10.f, 8.f, 17.6f);
+	collisionBoxes.push_back(backWallL);
+
+	// Back wall R (z = 17.5, left side)
+	DAABB backWallR;
+	backWallR.min = glm::vec3(-10.f, -2.f, 17.3f);
+	backWallR.max = glm::vec3(-1.f, 8.f, 17.6f);
+	collisionBoxes.push_back(backWallR);
+
+	// Pool outer wall - left side
+	DAABB poolLeft;
+	poolLeft.min = glm::vec3(-3.8f, -2.5f, -3.8f);
+	poolLeft.max = glm::vec3(-3.2f, 1.5f, 3.8f);
+	collisionBoxes.push_back(poolLeft);
+
+	// Pool outer wall - right side
+	DAABB poolRight;
+	poolRight.min = glm::vec3(3.2f, -2.5f, -3.8f);
+	poolRight.max = glm::vec3(3.8f, 1.5f, 3.8f);
+	collisionBoxes.push_back(poolRight);
+
+	// Pool outer wall - front side
+	DAABB poolFront;
+	poolFront.min = glm::vec3(-3.8f, -2.5f, -3.8f);
+	poolFront.max = glm::vec3(3.8f, 1.5f, -3.2f);
+	collisionBoxes.push_back(poolFront);
+
+	// Pool outer wall - back side
+	DAABB poolBack;
+	poolBack.min = glm::vec3(-3.8f, -2.5f, 3.2f);
+	poolBack.max = glm::vec3(3.8f, 1.5f, 3.8f);
+	collisionBoxes.push_back(poolBack);
 }
