@@ -178,7 +178,7 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 	gameState = STATE_FIND_GUN;
 	bulletsLeft = MAX_BULLETS;
 	targetsHit = 0;
-	bombTimer = 120.0f;
+	bombTimer = 30.0f;		// 30s to defuse and win game
 	gunPickedUp = false;
 	muzzleFlashTimer = 0.f;
 	fps = 0.f;
@@ -237,9 +237,9 @@ meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f),
 
 	glUniform1i(m_parameters[U_NUMLIGHTS], 2);
 
-	light[0].position = glm::vec3(0, 5, 0);
+	light[0].position = glm::vec3(0, 7.2, -1.6);
 	light[0].color = glm::vec3(1, 1, 1);
-	light[0].type = Light::LIGHT_POINT;
+	light[0].type = Light::LIGHT_SPOT;
 	light[0].power = 1;
 	light[0].kC = 1.f;
 	light[0].kL = 0.01f;
@@ -273,7 +273,7 @@ void SceneShooting::Update(double dt)
 	HandleKeyPress();
 	HandleMouseInput();
 
-	if (KeyboardController::GetInstance()->IsKeyDown('I'))
+	/*if (KeyboardController::GetInstance()->IsKeyDown('I'))
 		light[0].position.z -= static_cast<float>(dt) * 5.f;
 	if (KeyboardController::GetInstance()->IsKeyDown('K'))
 		light[0].position.z += static_cast<float>(dt) * 5.f;
@@ -284,10 +284,9 @@ void SceneShooting::Update(double dt)
 	if (KeyboardController::GetInstance()->IsKeyDown('O'))
 		light[0].position.y -= static_cast<float>(dt) * 5.f;
 	if (KeyboardController::GetInstance()->IsKeyDown('P'))
-		light[0].position.y += static_cast<float>(dt) * 5.f;
+		light[0].position.y += static_cast<float>(dt) * 5.f;*/
 
 
-	// Store position before camera update
 	// Store position before camera update
 	glm::vec3 oldPos = camera.position;
 	glm::vec3 oldTarget = camera.target;
@@ -333,12 +332,26 @@ void SceneShooting::Update(double dt)
 		{
 			if (CheckAABBCollision(camera.position, 0.3f, box))
 			{
-				// If hit a wall, revert X and Z
 				camera.position.x = oldPos.x;
 				camera.position.z = oldPos.z;
 				camera.target.x = oldTarget.x;
 				camera.target.z = oldTarget.z;
 				break;
+			}
+		}
+
+		// Door collision - only block when door is mostly closed
+		if (door[0].rotation < 80.f)  // 0 = fully closed, 90 = fully open
+		{
+			AABB doorBox;
+			doorBox.min = glm::vec3(-1.f, 0.f, 7.3f);
+			doorBox.max = glm::vec3(1.f, 4.f, 7.7f);
+			if (CheckAABBCollision(camera.position, 0.3f, doorBox))
+			{
+				camera.position.x = oldPos.x;
+				camera.position.z = oldPos.z;
+				camera.target.x = oldTarget.x;
+				camera.target.z = oldTarget.z;
 			}
 		}
 	}
@@ -379,46 +392,7 @@ void SceneShooting::Update(double dt)
 		showInteractPrompt = true;
 	}
 
-	// --- Update door collision box dynamically ---
-	// Door hinge is at X=1, Z=7.5. Width=2, depth=0.2.
-	// When closed (rotation~0): box spans X 1..3, Z 7.4..7.6.
-	// When open (rotation >= 90): door has swung along Z, clear the box
-	// by collapsing it so it never hits the player.
-	//if (doorCollisionIndex >= 0 && doorCollisionIndex < (int)collisionBoxes.size())
-	//{
-	//	float rot = door[0].rotation; // degrees, 0=closed, ~90=fully open
-	//	if (rot >= 85.f)
-	//	{
-	//		// Door fully open — collapse box so it blocks nothing
-	//		collisionBoxes[doorCollisionIndex].min = glm::vec3(0.f, 0.f, 0.f);
-	//		collisionBoxes[doorCollisionIndex].max = glm::vec3(0.f, 0.f, 0.f);
-	//	}
-	//	else
-	//	{
-	//		// Door closed or swinging — keep full blocking box
-	//		// Rotate the door extent around the hinge (X=1, Z=7.5)
-	//		float rad = glm::radians(rot);
-	//		float cosR = cosf(rad);
-	//		float sinR = sinf(rad);
-	//		// Door tip in local space: (width, 0) = (2, 0)
-	//		// After rotation: tip world offset from hinge
-	//		float tipX = 1.f + cosR * 2.f;   // hinge.x + cos(rot)*width
-	//		float tipZ = 7.5f - sinR * 2.f;  // hinge.z - sin(rot)*width (swings toward +Z)
-
-	//		float hingeX = 1.f;
-	//		float hingeZ = 7.5f;
-
-	//		collisionBoxes[doorCollisionIndex].min = glm::vec3(
-	//			std::min(hingeX, tipX) - 0.1f,
-	//			0.125f,
-	//			std::min(hingeZ, tipZ) - 0.1f
-	//		);
-	//		collisionBoxes[doorCollisionIndex].max = glm::vec3(
-	//			std::max(hingeX, tipX) + 0.1f,
-	//			3.875f,
-	//			std::max(hingeZ, tipZ) + 0.1f
-	//		);
-	//	}
+	
 
 	
 	// --- STATE_FIND_GUN: just let player walk around ---
@@ -929,15 +903,16 @@ void SceneShooting::Render()
 	modelStack.PopMatrix();
 
 	// balloon
-	/*modelStack.PushMatrix();
-	modelStack.Translate(-7.f, 1.5f, 4.f);
-	modelStack.Scale(0.5f, 0.5f, 0.5f);
+	modelStack.PushMatrix();
+	modelStack.Translate(9.f, 3.f, 5.3f);
+	modelStack.Scale(0.4f, 0.4f, 0.4f);
+
 	meshList[GEO_BALLOON]->material.kAmbient = glm::vec3(0.3f, 0.1f, 0.1f);
 	meshList[GEO_BALLOON]->material.kDiffuse = glm::vec3(0.8f, 0.2f, 0.2f);
 	meshList[GEO_BALLOON]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
 	meshList[GEO_BALLOON]->material.kShininess = 2.f;
 	RenderMesh(meshList[GEO_BALLOON], true);
-	modelStack.PopMatrix();*/
+	modelStack.PopMatrix();
 
 
 
@@ -1033,9 +1008,9 @@ void SceneShooting::Render()
 
 	// Door interaction prompts
 	if (showInteractPrompt)
-		RenderTextOnScreen(meshList[GEO_TEXT], "Press F to exit", glm::vec3(1.f, 1.f, 1.f), 40, 0, 50);
+		RenderTextOnScreen(meshList[GEO_TEXT], "[F] to exit", glm::vec3(1, 1, 1), 30.f, 230.f, 20.f);
 	else if (showLockedPrompt)
-		RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game first!", glm::vec3(1.f, 0.f, 0.f), 40, 0, 50);
+		RenderTextOnScreen(meshList[GEO_TEXT], "You need to win the game to leave.", glm::vec3(1.f, 0.f, 0.f), 20, 10, 10);
 
 	// ---- HUD: FIND GUN STATE ----
 	if (gameState == STATE_FIND_GUN)
@@ -1043,34 +1018,33 @@ void SceneShooting::Render()
 		if (!gunPickedUp)
 		{
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"Find the gun!", glm::vec3(1, 1, 0), 30.f, 300.f, 540.f);
+				"Find the gun!", glm::vec3(1, 1, 0), 30.f, 10.f, 540.f);
 
 			if (IsPlayerNearGun(2.5f))
 				RenderTextOnScreen(meshList[GEO_TEXT],
-					"[F] Pick up Gun", glm::vec3(1, 1, 1), 30.f, 280.f, 490.f);
+					"[F] Pick up Gun", glm::vec3(1, 1, 1), 30.f, 200.f, 20.f);
 		}
 		else
 		{
 			RenderTextOnScreen(meshList[GEO_TEXT],
-				"Go to the booth!", glm::vec3(1, 1, 0), 30.f, 280.f, 540.f);
+				"Go to the booth!", glm::vec3(1, 1, 0), 30.f, 10.f, 540.f);
 
 			if (IsPlayerNearBooth(2.5f))
 				RenderTextOnScreen(meshList[GEO_TEXT],
-					"[F] Start Game", glm::vec3(1, 1, 1), 30.f, 300.f, 490.f);
+					"[F] Start Game", glm::vec3(1, 1, 1), 30.f, 220.f, 490.f);
 		}
 	}
 
 	// ---- HUD: PLAYING STATE ----
 	if (gameState == STATE_PLAYING)
 	{
-		// Bomb timer – format as M:SS
-		int   minutes = (int)(bombTimer / 60.f);
-		int   seconds = (int)(bombTimer) % 60;
+		// Bomb timer 
+		int   seconds = (int)(bombTimer);
 		char  timerBuf[32];
-		sprintf_s(timerBuf, "TIME: %d:%02d", minutes, seconds);
+		sprintf_s(timerBuf, "TIME: %ds", seconds);
 
-		// Turn red when under 30 seconds
-		glm::vec3 timerColor = (bombTimer <= 30.f)
+		// Turn red when under 10 seconds
+		glm::vec3 timerColor = (bombTimer <= 10.f)
 			? glm::vec3(1, 0, 0)
 			: glm::vec3(1, 1, 1);
 
@@ -1095,20 +1069,20 @@ void SceneShooting::Render()
 	if (gameState == STATE_WON)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"BOMB DEFUSED!", glm::vec3(0, 1, 0), 60.f, 200.f, 340.f);
+			"BOMB DEFUSED!", glm::vec3(0, 1, 0), 40.f, 140.f, 340.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"Head back to the lobby!", glm::vec3(1, 1, 1), 30.f, 200.f, 290.f);
+			"Head back to the lobby!", glm::vec3(1, 1, 1), 30.f, 80.f, 290.f);
 	}
 
 	// ---- LOSE SCREEN ----
 	if (gameState == STATE_LOST)
 	{
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 60.f, 180.f, 340.f);
+			"BOOM. YOU FAILED.", glm::vec3(1, 0, 0), 40.f, 70.f, 340.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"The booth is gone.", glm::vec3(1, 1, 1), 30.f, 230.f, 290.f);
+			"The booth is gone.", glm::vec3(1, 1, 1), 30.f, 180.f, 290.f);
 		RenderTextOnScreen(meshList[GEO_TEXT],
-			"[R] Try Again", glm::vec3(1, 1, 0), 35.f, 300.f, 250.f);
+			"[R] Try Again", glm::vec3(1, 1, 0), 35.f, 200.f, 240.f);
 	}
 
 
@@ -1356,7 +1330,7 @@ void SceneShooting::ResetGame()
 	gameState = STATE_FIND_GUN;
 	bulletsLeft = MAX_BULLETS;
 	targetsHit = 0;
-	bombTimer = 120.0f;
+	bombTimer = 30.0f;
 	gunPickedUp = false;
 	fps = 0.f;
 	muzzleFlashTimer = 0.f;
@@ -1480,16 +1454,30 @@ void SceneShooting::BuildCollisionBoxes()
 	collisionBoxes.push_back(counter);
 
 	// Door (closed position - conservative box)
-	AABB doorBox;
+	/*AABB doorBox;
 	doorBox.min = glm::vec3(-1.f, 0.f, 7.3f);
 	doorBox.max = glm::vec3(1.f, 4.f, 7.7f);
-	collisionBoxes.push_back(doorBox);
+	collisionBoxes.push_back(doorBox);*/
 
 	// Gun on floor
 	/*AABB gunBox;
 	gunBox.min = gunWorldPos - glm::vec3(0.4f, 0.3f, 0.25f);
 	gunBox.max = gunWorldPos + glm::vec3(0.4f, 0.3f, 0.25f);
 	collisionBoxes.push_back(gunBox);*/
+
+
+	// Crate 
+	AABB crate;
+	crate.min = glm::vec3(4.f, 0.f, 3.3f);
+	crate.max = glm::vec3(6.f, 2.4f, 5.7f);
+	collisionBoxes.push_back(crate);
+
+	// Box 2 big 
+	AABB box2;
+	box2.min = glm::vec3(5.5f, 0.f, 1.5f);
+	box2.max = glm::vec3(7.5f, 2.0f, 4.5f);
+	collisionBoxes.push_back(box2);
+
 }
 
 
@@ -1589,7 +1577,7 @@ void SceneShooting::HandleKeyPress()
 			glfwSetInputMode(glfwGetCurrentContext(), GLFW_CURSOR, GLFW_CURSOR_DISABLED); // hide cursor
 			camera.Init(shootingPos, shootingTarget, glm::vec3(0.f, 1.f, 0.f));
 			gameState = STATE_PLAYING;
-			bombTimer = 120.0f;
+			bombTimer = 30.0f;
 		}
 	}
 

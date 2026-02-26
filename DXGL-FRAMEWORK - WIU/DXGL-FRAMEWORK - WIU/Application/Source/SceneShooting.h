@@ -50,7 +50,7 @@ public:
 		GEO_LIGHT_STRING,
 		GEO_BOX,
 		GEO_CRATE,
-		//GEO_BALLOON,
+	
 
 		// HUD
 		GEO_GUI,            
