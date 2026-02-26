@@ -10,6 +10,9 @@
 #include "SceneManager.h"
 #include "Door.h"
 #include <iostream>
+#include <vector>
+
+
 
 class SceneLobby : public Scene
 {
@@ -30,6 +33,9 @@ public:
 
 		GEO_DOOR_HOLE,
 		GEO_DOOR,
+
+		GEO_CIRCUSTENT,
+		GEO_GROUND,
 
 		GEO_LIGHT_SWITCH,        // Switch plate
 		GEO_LIGHT_SWITCH_LEVER,  // Toggle lever
@@ -155,9 +161,14 @@ private:
 	glm::vec3 playerSize;
 	bool CheckWallCollision(const glm::vec3& pos);
 
-	
-
 	float fps = 0;
+
+	struct DAABB {
+		glm::vec3 min, max;
+	};
+	std::vector<DAABB> collisionBoxes;
+	bool CheckDAABBCollision(const glm::vec3& pos, float radius, const DAABB& box);
+	void BuildCollisionBoxes();
 };
 
 #endif

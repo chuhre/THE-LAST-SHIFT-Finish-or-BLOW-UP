@@ -173,8 +173,6 @@ void SceneDucks::Init()
 	catchTimer = 0.f;
 	bombTimer = 30.0f;
 
-	//1.f, 2.f, 17.5f), 2.f, 3.75f
-
 	// Door setup — position at the back doorway (z = 17.5)
 	door[0] = { glm::vec3(0.f, 1.f, 0.f), 2.f, 3.75f, SceneManager::SCENE_LOBBY };
 	// Door prompt flags
@@ -1219,6 +1217,7 @@ void SceneDucks::HandleMouseInput()
 
 							if (ducksPickedUp >= MAX_DUCKS)
 								gameState = STATE_WON;
+								SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_DUCKS] = true;
 						}
 						else
 						{

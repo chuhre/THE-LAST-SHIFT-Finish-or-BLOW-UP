@@ -92,7 +92,7 @@ void SceneShooting::Init()
 
 	meshList[GEO_AXES] = MeshBuilder::GenerateAxes("Axes", 10000.f, 10000.f, 10000.f);
 	meshList[GEO_SPHERE] = MeshBuilder::GenerateSphere("Sun", glm::vec3(1.f, 1.f, 1.f), 1.f, 16, 16);
-	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Arm", glm::vec3(0.f, 0.f, 0.f), 1.f);
+	meshList[GEO_CUBE] = MeshBuilder::GenerateCube("Cube", glm::vec3(0.f, 0.f, 0.f), 1.f);
 	meshList[GEO_PLANE] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 10.f);
 
 
@@ -108,10 +108,8 @@ void SceneShooting::Init()
 	meshList[GEO_TARGET] = MeshBuilder::GenerateOBJMTL("Target", "Models//target.obj", "Models//target.mtl");
 	meshList[GEO_TARGET]->textureID = LoadTGA("Images//target_baseColor.tga");
 	
-	//meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.f, 0.f, 0.f), 0.5f, 16, 16);
-	meshList[GEO_BOMB] = MeshBuilder::GenerateSphere(
-		"Bomb", glm::vec3(0.05f, 0.05f, 0.05f), 0.35f, 16, 16);
-
+	meshList[GEO_BOMB] = MeshBuilder::GenerateOBJMTL("Bomb", "Models//round_bomb.obj", "Models//round_bomb.mtl");
+	meshList[GEO_BOMB]->textureID = LoadTGA("Images//bomb_baseColor.tga");
 	
 	meshList[GEO_GUN] = MeshBuilder::GenerateOBJMTL("Gun", "Models//nerf_gun.obj", "Models//nerf_gun.mtl");
 	meshList[GEO_GUN]->textureID = LoadTGA("Images//blinn1_baseColor.tga");
@@ -798,12 +796,9 @@ void SceneShooting::Render()
 	modelStack.PopMatrix();                     // <<< COUNTER PARENT
 
 	// ---- BOMB (CHILD of Counter) ----
-	// Offset: +0.5 in Y (sits on top of counter surface),
-	//         -7 in X (left end of counter)
-	// No extra Z needed – inherits counter's Z=1.5
 	modelStack.PushMatrix();                // >>> BOMB CHILD
-	modelStack.Translate(-7.f, 1.8f, 1.5f);
-	modelStack.Scale(1.f, 1.f, 1.f);
+	modelStack.Translate(-2.5f, 1.86f, 1.5f);
+	modelStack.Scale(6.f, 6.f, 6.f);
 
 	meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.05f, 0.05f, 0.05f);
 	meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.1f, 0.1f, 0.1f);

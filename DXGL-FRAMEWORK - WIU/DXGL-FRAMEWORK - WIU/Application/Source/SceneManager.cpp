@@ -9,11 +9,11 @@ SceneManager* SceneManager::m_instance = nullptr;
 
 SceneManager::SceneManager(void)
     : currentScene(nullptr)
-	, currentSceneType(SCENE_LOBBY) //switch to lobby first since menu is not implemented yet
+    , currentSceneType(SCENE_LOBBY)
     , nextSceneType(SCENE_LOBBY)
+    , prevSceneType(SCENE_LOBBY)
     , needsSwitch(false)
 {
-    // Initialize all scene pointers to nullptr
     for (int i = 0; i < SCENE_TOTAL; i++)
     {
         scenes[i] = nullptr;
@@ -44,68 +44,48 @@ void SceneManager::DestroyInstance(void)
 
 void SceneManager::Init(void)
 {
-    // Create all scenes
-    //scenes[SCENE_MENU] = new SceneMenu();
-	scenes[SCENE_LOBBY] = new SceneLobby();
+    scenes[SCENE_LOBBY] = new SceneLobby();
     scenes[SCENE_DUCKS] = new SceneDucks();
     scenes[SCENE_SHOOTING] = new SceneShooting();
     scenes[SCENE_CANS] = new SceneCans();
     scenes[SCENE_TANK] = new SceneTank();
 
-    // Initialize the first scene
-    currentSceneType = SCENE_TANK;
+    currentSceneType = SCENE_LOBBY;
     currentScene = scenes[currentSceneType];
     currentScene->Init();
 }
 
 void SceneManager::Update(double dt)
 {
-    // Handle scene switching if needed
     if (needsSwitch)
     {
-        // Exit current scene
         if (currentScene)
-        {
             currentScene->Exit();
-        }
 
-        // Switch to next scene
         currentSceneType = nextSceneType;
         currentScene = scenes[currentSceneType];
 
-        // Initialize new scene
         if (currentScene)
-        {
             currentScene->Init();
-        }
 
         needsSwitch = false;
     }
 
-    // Update current scene
     if (currentScene)
-    {
         currentScene->Update(dt);
-    }
 }
 
 void SceneManager::Render(void)
 {
     if (currentScene)
-    {
         currentScene->Render();
-    }
 }
 
 void SceneManager::Exit(void)
 {
-    // Exit current scene
     if (currentScene)
-    {
         currentScene->Exit();
-    }
 
-    // Delete all scenes
     for (int i = 0; i < SCENE_TOTAL; i++)
     {
         if (scenes[i])
@@ -118,6 +98,7 @@ void SceneManager::Exit(void)
 
 void SceneManager::SwitchScene(SCENE_TYPE sceneType)
 {
+    prevSceneType = currentSceneType;
     nextSceneType = sceneType;
     needsSwitch = true;
 }
@@ -125,4 +106,9 @@ void SceneManager::SwitchScene(SCENE_TYPE sceneType)
 SceneManager::SCENE_TYPE SceneManager::GetCurrentSceneType(void)
 {
     return currentSceneType;
+}
+
+SceneManager::SCENE_TYPE SceneManager::GetPreviousScene(void)
+{
+    return prevSceneType;
 }

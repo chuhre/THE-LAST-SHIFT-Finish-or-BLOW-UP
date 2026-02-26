@@ -97,7 +97,8 @@ void SceneTank::Init()
 	meshList[GEO_BALL2] = MeshBuilder::GenerateSphere("Ball2", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
 	meshList[GEO_BALL3] = MeshBuilder::GenerateSphere("Ball3", glm::vec3(1.f, 1.f, 1.f), 0.5f, 16, 16);
 	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 15.f, 2.0f, 1.0f);
-	meshList[GEO_BOMB] = MeshBuilder::GenerateSphere("Bomb", glm::vec3(0.05f, 0.05f, 0.05f), 0.35f, 16, 16);
+	meshList[GEO_BOMB] = MeshBuilder::GenerateOBJMTL("Bomb", "Models//round_bomb.obj", "Models//round_bomb.mtl");
+	meshList[GEO_BOMB]->textureID = LoadTGA("Images//bomb_baseColor.tga");
 	meshList[GEO_PILLAR] = MeshBuilder::GenerateRectangularPrism("Pillar", glm::vec3(0.55f, 0.35f, 0.15f), 1.f, 5.f, 1.f);
 	meshList[GEO_DOOR] = MeshBuilder::GenerateRectangularPrism("Door", glm::vec3(0.4f, 0.25f, 0.15f), 1.f, 1.f, 1.f); // dark wood color
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
@@ -587,6 +588,7 @@ void SceneTank::Update(double dt)
 		if (targetRotation >= 90.f)
 		{
 			gameState = STATE_WON;
+			SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_TANK] = true;
 		}
 	}
 
@@ -899,6 +901,8 @@ void SceneTank::Render()
 	// bomb
 	modelStack.PushMatrix();
 	modelStack.Translate(2.5f, 2.3f, 5.f);
+	modelStack.Scale(6.f, 6.f, 6.f);
+
 	meshList[GEO_BOMB]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 	meshList[GEO_BOMB]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 	meshList[GEO_BOMB]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);

@@ -11,6 +11,10 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <cstdlib>  
+#include <ctime>     
+#include <cmath>
+#include <cstdio>    
 
 #include "shader.hpp"
 #include "Application.h"
@@ -75,13 +79,34 @@ void SceneLobby::Init()
 	m_parameters[U_TEXT_ENABLED] = glGetUniformLocation(m_programID, "textEnabled");
 	m_parameters[U_TEXT_COLOR] = glGetUniformLocation(m_programID, "textColor");
 
-	// Initialise camera properties
-	//camera.Init(45.f, 45.f, 10.f);
-	camera.Init(
-		glm::vec3(0, 2.1, 10),		// position
-		glm::vec3(0, 2, 0),		// target
-		glm::vec3(0, 1.0f, 0)		// up
-	);
+	switch (SceneManager::GetInstance()->GetPreviousScene())
+	{
+	case SceneManager::SCENE_DUCKS:
+		camera.Init(glm::vec3(-8.f, 0.6f, 2.f),
+			glm::vec3(-8.f, 2.f, 0.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_SHOOTING:
+		camera.Init(glm::vec3(8.f, 0.6f, 2.f),
+			glm::vec3(8.f, 2.f, 0.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_CANS:
+		camera.Init(glm::vec3(0.f, 0.6f, 6.f),
+			glm::vec3(0.f, 2.f, 8.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	case SceneManager::SCENE_TANK:
+		camera.Init(glm::vec3(0.f, 0.6f, -6.f),
+			glm::vec3(0.f, 2.f, -8.f),
+			glm::vec3(0, 1.f, 0));
+		break;
+	default:
+		camera.Init(glm::vec3(0, 0.6f, 10),
+			glm::vec3(0, 2.f, 0),
+			glm::vec3(0, 1.f, 0));
+		break;
+	}
 
 	// Init VBO here
 	for (int i = 0; i < NUM_GEOMETRY; ++i)
@@ -96,31 +121,34 @@ void SceneLobby::Init()
 	//meshList[GEO_PLANE]->textureID = LoadTGA("Images//met4.tga");
 
 	meshList[GEO_DOOR] = MeshBuilder::GenerateCube("Door", glm::vec3(1.f, 1.f, 1.f), 1.f);
+	meshList[GEO_GROUND] = MeshBuilder::GenerateRectangularPrism("Ground", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
+
 
 	meshList[GEO_TEXT] = MeshBuilder::GenerateText("text", 16, 16);
 	meshList[GEO_TEXT]->textureID = LoadTGA("Images//calibri.tga");
 
 	// OBJ Models
+	meshList[GEO_CIRCUSTENT] = MeshBuilder::GenerateOBJ("Circustent", "Models//circustent.obj");
 
 
 	// Skybox NIGHT
-	/*meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_LEFT]->textureID = LoadTGA("Images//nightsky_lf.tga");
+	meshList[GEO_LEFT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
+	meshList[GEO_LEFT]->textureID = LoadTGA("Images//sunset_lf.tga");
 
 	meshList[GEO_RIGHT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_RIGHT]->textureID = LoadTGA("Images//nightsky_rt.tga");
+	meshList[GEO_RIGHT]->textureID = LoadTGA("Images//sunset_rt.tga");
 
 	meshList[GEO_TOP] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_TOP]->textureID = LoadTGA("Images//nightsky_up.tga");
+	meshList[GEO_TOP]->textureID = LoadTGA("Images//sunset_up.tga");
 
 	meshList[GEO_BOTTOM] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BOTTOM]->textureID = LoadTGA("Images//nightsky_dn.tga");
+	meshList[GEO_BOTTOM]->textureID = LoadTGA("Images//sunset_dn.tga");
 
 	meshList[GEO_FRONT] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_FRONT]->textureID = LoadTGA("Images//nightsky_bk.tga");
+	meshList[GEO_FRONT]->textureID = LoadTGA("Images//sunset_bk.tga");
 
 	meshList[GEO_BACK] = MeshBuilder::GenerateQuad("Plane", glm::vec3(1.f, 1.f, 1.f), 100.f);
-	meshList[GEO_BACK]->textureID = LoadTGA("Images//nightsky_ft.tga ");*/
+	meshList[GEO_BACK]->textureID = LoadTGA("Images//sunset_ft.tga ");
 
 
 
@@ -170,6 +198,8 @@ void SceneLobby::Init()
 	doors[2] = { glm::vec3(0.0f, 0.0f, 8.0f), 1.5f, 2.5f, SceneManager::SCENE_CANS };  
 	doors[3] = { glm::vec3(0.0f, 0.0f, -8.0f), 1.5f, 2.5f, SceneManager::SCENE_TANK };  
 
+	BuildCollisionBoxes();
+
 }
 
 
@@ -194,11 +224,37 @@ void SceneLobby::Update(double dt)
 		light[0].position.y += static_cast<float>(dt) * 5.f;
 
 
-	// Store position before camera update
 	glm::vec3 oldPos = camera.position;
-
-	// Update camera position based on input
+	glm::vec3 oldTarget = camera.target;
 	camera.Update(dt);
+	glm::vec3 updatedPos = camera.position;
+
+	// Vertical collision (floor)
+	camera.position = glm::vec3(oldPos.x, updatedPos.y, oldPos.z);
+	for (const DAABB& box : collisionBoxes)
+	{
+		if (CheckDAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.y = oldPos.y;
+			camera.target.y = oldTarget.y;
+			break;
+		}
+	}
+
+	// Horizontal collision (walls)
+	float currentY = camera.position.y;
+	camera.position = glm::vec3(updatedPos.x, currentY, updatedPos.z);
+	for (const DAABB& box : collisionBoxes)
+	{
+		if (CheckDAABBCollision(camera.position, 0.3f, box))
+		{
+			camera.position.x = oldPos.x;
+			camera.position.z = oldPos.z;
+			camera.target.x = oldTarget.x;
+			camera.target.z = oldTarget.z;
+			break;
+		}
+	}
 
 
 	
@@ -243,7 +299,7 @@ void SceneLobby::Update(double dt)
 		}
 	}
 
-	
+
 
 
 }
@@ -295,10 +351,58 @@ void SceneLobby::Render()
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
 
-
+	modelStack.PushMatrix();
+	modelStack.Translate(0.0f, -1.8f, 0.0f);
+	modelStack.Scale(1.0f, 1.0f, 1.0f);
+	meshList[GEO_CIRCUSTENT]->material.kAmbient = glm::vec3(0.4f, 0.05f, 0.05f);
+	meshList[GEO_CIRCUSTENT]->material.kDiffuse = glm::vec3(0.9f, 0.1f, 0.1f);
+	meshList[GEO_CIRCUSTENT]->material.kSpecular = glm::vec3(0.6f, 0.3f, 0.3f);
+	meshList[GEO_CIRCUSTENT]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CIRCUSTENT], true);
+	modelStack.PopMatrix();
 
 	// Skybox NIGHT
-	//RenderSkybox();
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, -50.f);
+	RenderMesh(meshList[GEO_FRONT], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 0.f, 50.f);
+	modelStack.Rotate(-180.f, 0.f, 1.f, 0.f);
+	RenderMesh(meshList[GEO_BACK], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(-50.f, 0.f, 0.f);
+	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
+	RenderMesh(meshList[GEO_LEFT], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(50.f, 0.f, 0.f);
+	modelStack.Rotate(-90.f, 0.f, 1.f, 0.f);
+	RenderMesh(meshList[GEO_RIGHT], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, 50.f, 0.f);
+	modelStack.Rotate(90.f, 1.f, 0.f, 0.f);
+	modelStack.Rotate(90.f, 0.f, 0.f, 1.f);
+	RenderMesh(meshList[GEO_TOP], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, -50.f, 0.f);
+	modelStack.Rotate(-90.f, 1.f, 0.f, 0.f);
+	RenderMesh(meshList[GEO_BOTTOM], false);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(0.f, -2.8f, 0.f);
+	modelStack.Scale(10.0f, 10.0f, 10.0f);
+	RenderMesh(meshList[GEO_GROUND], false);
+	modelStack.PopMatrix();
 
 	//render doors
 	for (int i = 0; i < 4; i++)
@@ -325,6 +429,17 @@ void SceneLobby::Render()
 		if (showInteractPrompt)
 			RenderTextOnScreen(meshList[GEO_TEXT], "Press F to enter", glm::vec3(1.f, 1.f, 0.f), 40, 50, 50);
 	}
+	
+
+	// All games completed
+	bool allDone = SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_DUCKS] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_SHOOTING] &&
+		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_TANK];
+
+	if (allDone)
+		RenderTextOnScreen(meshList[GEO_TEXT], "CONGRATULATIONS!", glm::vec3(1.f, 1.f, 0.f), 40.f, 230.f, 400.f);
+		RenderTextOnScreen(meshList[GEO_TEXT], "THANKS FOR PLAYING!", glm::vec3(1.f, 1.f, 0.f), 40.f, 200.f, 300.f);
 
 }
 
@@ -384,9 +499,9 @@ void SceneLobby::RenderSkybox() {
 	// Offset in Z direction by -50 units
 	modelStack.Translate(0.f, 0.f, -50.f);
 
-	// Skybox should be rendered without light
-	RenderMesh(meshList[GEO_FRONT], false);
-	modelStack.PopMatrix();
+	//// Skybox should be rendered without light
+	//RenderMesh(meshList[GEO_FRONT], false);
+	//modelStack.PopMatrix();
 
 	// Do the rest of the quads with
 	// appropriate positions and rotations
@@ -659,3 +774,30 @@ void SceneLobby::RenderTextOnScreen(Mesh* mesh, std::string
 	glEnable(GL_DEPTH_TEST);
 	glDisable(GL_BLEND);
 }
+
+void SceneLobby::BuildCollisionBoxes()
+{
+	collisionBoxes.clear();
+
+	// Floor — adjust these bounds to match your ground mesh size/position
+	DAABB floor;
+	floor.min = glm::vec3(-50.f, -2.f, -50.f);
+	floor.max = glm::vec3(50.f, 0.f, 50.f);
+	collisionBoxes.push_back(floor);
+
+	// Circus tent base
+	DAABB tentBase;
+	tentBase.min = glm::vec3(-13.5f, -2.f, -14.f);
+	tentBase.max = glm::vec3(14.8f, 0.0f, 15.1f);
+	collisionBoxes.push_back(tentBase);
+}
+
+bool SceneLobby::CheckDAABBCollision(const glm::vec3& pos, float radius, const DAABB& box)
+{
+	glm::vec3 closestPoint;
+	closestPoint.x = glm::clamp(pos.x, box.min.x, box.max.x);
+	closestPoint.y = glm::clamp(pos.y, box.min.y, box.max.y);
+	closestPoint.z = glm::clamp(pos.z, box.min.z, box.max.z);
+	return glm::distance(closestPoint, pos) < radius;
+}
+
