@@ -438,7 +438,6 @@ void SceneLobby::Render()
 		SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_TANK];
 
 	if (allDone)
-		RenderTextOnScreen(meshList[GEO_TEXT], "CONGRATULATIONS!", glm::vec3(1.f, 1.f, 0.f), 40.f, 230.f, 400.f);
 		RenderTextOnScreen(meshList[GEO_TEXT], "THANKS FOR PLAYING!", glm::vec3(1.f, 1.f, 0.f), 40.f, 200.f, 300.f);
 
 }
