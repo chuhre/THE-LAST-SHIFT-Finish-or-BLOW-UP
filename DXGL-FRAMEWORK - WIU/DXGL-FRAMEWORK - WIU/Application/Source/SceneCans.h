@@ -48,7 +48,9 @@ public:
 		GEO_TABLE,
 		GEO_CAN,
 		GEO_BOMB,
-
+		
+		GEO_OWALL,
+		GEO_CRATE,
 		GEO_GUI,
 
 		GEO_TEXT,

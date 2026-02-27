@@ -110,21 +110,27 @@ void SceneCans::Init()
 	meshList[GEO_BALL]->textureID = LoadTGA("Images//ball.tga");
 
 	meshList[GEO_BOMB] = MeshBuilder::GenerateOBJMTL("Bomb", "Models//ball.obj", "Models//ball.mtl");
-	meshList[GEO_BOMB]->textureID = LoadTGA("Images//bomb.tga");
+	meshList[GEO_BOMB]->textureID = LoadTGA("Images//bomb_baseColor.tga");
 
 	// Environment
 	meshList[GEO_FLOOR] = MeshBuilder::GenerateRectangularPrism("Floor", glm::vec3(0.45f, 0.32f, 0.18f), 20.f, 0.2f, 15.f);
+	meshList[GEO_FLOOR]->textureID = LoadTGA("Images//wood_floor.tga");
+
 	meshList[GEO_CEILING] = MeshBuilder::GenerateRectangularPrism("Ceiling", glm::vec3(0.85f, 0.75f, 0.55f), 20.f, 0.2f, 15.f);
 	meshList[GEO_CEILING]->textureID = LoadTGA("Images//carnivalwallpaper2.tga");
 
 	meshList[GEO_WALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f),1.f, 1.f, 1.f);   
 	meshList[GEO_WALL]->textureID = LoadTGA("Images//carnivalwallpaper.tga");
 
+	meshList[GEO_OWALL] = MeshBuilder::GenerateRectangularPrism("Wall", glm::vec3(0.9f, 0.85f, 0.6f), 1.f, 1.f, 1.f);
+	meshList[GEO_OWALL]->textureID = LoadTGA("Images//wood_wall.tga");
+
 	meshList[GEO_COUNTER] = MeshBuilder::GenerateRectangularPrism("Counter", glm::vec3(0.55f, 0.35f, 0.15f), 20.f, 1.0f, 0.4f);
 
 	meshList[GEO_TABLE] = MeshBuilder::GenerateOBJMTL("Table", "Models//table.obj", "Models//table.mtl");
 	meshList[GEO_TABLE]->textureID = LoadTGA("Images//table.tga");
 
+	meshList[GEO_CRATE] = MeshBuilder::GenerateOBJ("Crate", "Models//cratebig.obj");
 
 	// In Init() — change 4.0f/3.0f -> 16.0f/9.0f (or 1920.0f/1080.0f)
 	glm::mat4 projection = glm::perspective(45.0f, 16.0f / 9.0f, 0.1f, 1000.0f);
@@ -179,40 +185,6 @@ void SceneCans::Init()
 	gameState = GAME_NOT_STARTED;
 	SceneManager::GetInstance()->gameCompleted[SceneManager::SCENE_CANS] = false;
 	bombTimer = 60.0f;
-
-	// Sync door collision boxes to open/closed state
-	// Door is "open enough" to walk through when rotation exceeds ~70 degrees
-	auto UpdateDoorAABB = [&](int doorIdx, int colIdx, bool isLeftWallDoor)
-		{
-			if (colIdx < 0 || colIdx >= (int)collisionBoxes.size()) return;
-
-			bool isOpen = (door[doorIdx].rotation < 5.f);
-
-			if (isOpen)
-			{
-				// Collapse the AABB so it blocks nothing
-				collisionBoxes[colIdx].min = glm::vec3(0.f);
-				collisionBoxes[colIdx].max = glm::vec3(0.f);
-			}
-			else
-			{
-				if (!isLeftWallDoor)
-				{
-					// Door[0]: back wall
-					collisionBoxes[colIdx].min = glm::vec3(-0.1f, 0.f, 14.3f);
-					collisionBoxes[colIdx].max = glm::vec3(2.1f, 4.f, 14.7f);
-				}
-				else
-				{
-					// Door[1]: left wall
-					collisionBoxes[colIdx].min = glm::vec3(-10.2f, 0.f, 5.25f);
-					collisionBoxes[colIdx].max = glm::vec3(-9.8f, 4.f, 7.25f);
-				}
-			}
-		};
-
-	UpdateDoorAABB(0, doorCollisionIdx[0], false);
-	UpdateDoorAABB(1, doorCollisionIdx[1], true);
 }
 
 
@@ -396,7 +368,34 @@ void SceneCans::Update(double dt)
 		showBoothPrompt = false;
 	}
 	
+	auto UpdateDoorAABB = [&](int doorIdx, int colIdx, bool isLeftWallDoor)
+		{
+			if (colIdx < 0 || colIdx >= (int)collisionBoxes.size()) return;
 
+			bool isOpen = (door[doorIdx].rotation > 70.f);
+
+			if (isOpen)
+			{
+				collisionBoxes[colIdx].min = glm::vec3(0.f);
+				collisionBoxes[colIdx].max = glm::vec3(0.f);
+			}
+			else
+			{
+				if (!isLeftWallDoor)
+				{
+					collisionBoxes[colIdx].min = glm::vec3(-0.1f, 0.f, 14.3f);
+					collisionBoxes[colIdx].max = glm::vec3(2.1f, 4.f, 14.7f);
+				}
+				else
+				{
+					collisionBoxes[colIdx].min = glm::vec3(-10.2f, 0.f, 5.25f);
+					collisionBoxes[colIdx].max = glm::vec3(-9.8f, 4.f, 7.25f);
+				}
+			}
+		};
+
+	UpdateDoorAABB(0, doorCollisionIdx[0], false);
+	UpdateDoorAABB(1, doorCollisionIdx[1], true);
 	
 }
 
@@ -412,6 +411,8 @@ void SceneCans::Render()
 		camera.target.x, camera.target.y, camera.target.z,
 		camera.up.x, camera.up.y, camera.up.z
 	);
+
+	
 
 	// Load identity matrix into the model stack
 	modelStack.LoadIdentity();
@@ -441,6 +442,9 @@ void SceneCans::Render()
 	modelStack.Scale(0.1f, 0.1f, 0.1f);
 	RenderMesh(meshList[GEO_SPHERE], false);
 	modelStack.PopMatrix();
+
+
+
 
 	//render main door
 	modelStack.PushMatrix();
@@ -522,7 +526,7 @@ void SceneCans::Render()
 
 	//door frame
 	modelStack.PushMatrix();
-	modelStack.Translate(-10.f, 5.85f, 5.f);
+	modelStack.Translate(-9.99f, 5.85f, 5.f);
 	modelStack.Scale(0.3f, 4.25f, 5.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
@@ -558,13 +562,91 @@ void SceneCans::Render()
 
 	//door frame
 	modelStack.PushMatrix();
-	modelStack.Translate(0.f, 5.9f, 14.5f);
+	modelStack.Translate(0.f, 5.9f, 14.49f);
 	modelStack.Rotate(90.f, 0.f, 1.f, 0.f);
 	modelStack.Scale(0.3f, 4.25f, 4.f);
 	RenderMesh(meshList[GEO_WALL], true);
 	modelStack.PopMatrix();
 
 	
+
+
+
+	//outside
+	//front wall
+	modelStack.PushMatrix();
+	modelStack.Translate(-22.5f, 4.f, -7.5f);
+	modelStack.Scale(24.5f, 8.f, 0.3f);
+	meshList[GEO_OWALL]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_OWALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_OWALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_OWALL]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_OWALL], true);
+	modelStack.PopMatrix();
+
+	//left wall 
+	modelStack.PushMatrix();
+	modelStack.Translate(-25.5f, 4.f, 3.f);
+	modelStack.Scale(0.3f, 8.f, 23.f);
+	RenderMesh(meshList[GEO_OWALL], true);
+	modelStack.PopMatrix();
+
+	//back wall 
+	modelStack.PushMatrix();
+	modelStack.Translate(-22.5f, 4.f, 14.5f);
+	modelStack.Scale(24.5f, 8.f, 0.3f);
+	meshList[GEO_OWALL]->material.kAmbient = glm::vec3(0.3f, 0.25f, 0.15f);
+	meshList[GEO_OWALL]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.5f);
+	meshList[GEO_OWALL]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_OWALL]->material.kShininess = 2.f;
+	RenderMesh(meshList[GEO_OWALL], true);
+	modelStack.PopMatrix();
+
+	modelStack.PushMatrix();
+	modelStack.Translate(-22.f, 8.f, 3.25f);
+	modelStack.Scale(1.3f, 1.f, 1.5f);
+	meshList[GEO_CEILING]->material.kAmbient = glm::vec3(0.4f, 0.35f, 0.25f);
+	meshList[GEO_CEILING]->material.kDiffuse = glm::vec3(0.85f, 0.75f, 0.55f);
+	meshList[GEO_CEILING]->material.kSpecular = glm::vec3(0.05f, 0.05f, 0.05f);
+	meshList[GEO_CEILING]->material.kShininess = 1.f;
+	RenderMesh(meshList[GEO_CEILING], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(-14.6f, 0.f, 7.f);
+	modelStack.Scale(2.0f, 2.0f, 2.0f);
+	modelStack.Rotate(0.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	// CRATE
+	modelStack.PushMatrix();
+	modelStack.Translate(-16.5f, 0.5f, 3.6f);
+	modelStack.Scale(2.0f, 2.0f, 2.0f);
+	modelStack.Rotate(-73.f, 0.f, 1.f, 0.f);
+	meshList[GEO_CRATE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.07f);
+	meshList[GEO_CRATE]->material.kDiffuse = glm::vec3(0.55f, 0.27f, 0.07f);
+	meshList[GEO_CRATE]->material.kSpecular = glm::vec3(0.2f, 0.1f, 0.05f);
+	meshList[GEO_CRATE]->material.kShininess = 16.f;
+	RenderMesh(meshList[GEO_CRATE], true);
+	modelStack.PopMatrix();
+
+	//TABLE
+	modelStack.PushMatrix();
+	modelStack.Translate(-18.f, 0.f, -3.f);
+	modelStack.Scale(1.15f, 1.15f, 1.15f);
+	meshList[GEO_TABLE]->material.kAmbient = glm::vec3(0.25f, 0.15f, 0.05f);
+	meshList[GEO_TABLE]->material.kDiffuse = glm::vec3(0.55f, 0.35f, 0.15f);
+	meshList[GEO_TABLE]->material.kSpecular = glm::vec3(0.2f, 0.15f, 0.1f);
+	meshList[GEO_TABLE]->material.kShininess = 8.f;
+	RenderMesh(meshList[GEO_TABLE], true);
+	modelStack.PopMatrix();
+
 
 	int renderBall;
 
@@ -657,7 +739,7 @@ void SceneCans::Render()
 	{
 		modelStack.PushMatrix();
 		modelStack.Translate(m_balls[0].ball.pos.x, m_balls[0].ball.pos.y, m_balls[0].ball.pos.z);
-		modelStack.Scale(0.15f, 0.15f, 0.15f);
+		modelStack.Scale(15.f, 15.f, 15.f);
 		meshList[GEO_BALL]->material.kAmbient = glm::vec3(0.1f, 0.1f, 0.1f);
 		meshList[GEO_BALL]->material.kDiffuse = glm::vec3(0.5f, 0.5f, 0.5f);
 		meshList[GEO_BALL]->material.kSpecular = glm::vec3(0.9f, 0.9f, 0.9f);
@@ -861,7 +943,7 @@ void SceneCans::RenderMesh(Mesh* mesh, bool enableLight)
 
 void SceneCans::RenderSkybox() {
 	modelStack.PushMatrix();
-
+	
 	// Offset in Z direction by -50 units
 	modelStack.Translate(0.f, 0.f, -50.f);
 
@@ -1358,6 +1440,43 @@ void SceneCans::BuildCollisionBoxes()
 	door1.max = glm::vec3(-9.8f, 4.f, 7.25f);
 	doorCollisionIdx[1] = collisionBoxes.size();
 	collisionBoxes.push_back(door1);
+
+	//OUTSIDE ROOM 
+	// Outside front wall
+	AABB outsideFrontWall;
+	outsideFrontWall.min = glm::vec3(-34.75f, 0.f, -7.65f);
+	outsideFrontWall.max = glm::vec3(-10.25f, 8.f, -7.35f);
+	collisionBoxes.push_back(outsideFrontWall);
+
+	// Outside left wall
+	AABB outsideLeftWall;
+	outsideLeftWall.min = glm::vec3(-25.65f, 0.f, -8.5f);
+	outsideLeftWall.max = glm::vec3(-25.35f, 8.f, 14.5f);
+	collisionBoxes.push_back(outsideLeftWall);
+
+	// Outside back wall
+	AABB outsideBackWall;
+	outsideBackWall.min = glm::vec3(-34.75f, 0.f, 14.35f);
+	outsideBackWall.max = glm::vec3(-10.25f, 8.f, 14.65f);
+	collisionBoxes.push_back(outsideBackWall);
+
+	// Crate 1
+	AABB crate1;
+	crate1.min = glm::vec3(-15.6f, 0.f, 6.f);
+	crate1.max = glm::vec3(-13.6f, 2.f, 8.f);
+	collisionBoxes.push_back(crate1);
+
+	// Crate 2
+	AABB crate2;
+	crate2.min = glm::vec3(-17.8f, 0.f, 2.3f);
+	crate2.max = glm::vec3(-15.2f, 2.5f, 4.9f);
+	collisionBoxes.push_back(crate2);
+
+	// Outside table
+	AABB outsideTable;
+	outsideTable.min = glm::vec3(-20.f, 0.f, -5.f);
+	outsideTable.max = glm::vec3(-16.f, 2.f, -1.f);
+	collisionBoxes.push_back(outsideTable);
 
 }
 
